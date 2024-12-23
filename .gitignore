@@ -1,0 +1,10 @@
+/build/
+CMakeFiles/
+CMakeCache.txt
+*.o
+*.exe
+*.log
+
+# IDE specific files
+.vscode/
+*.swp
