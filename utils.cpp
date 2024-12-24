@@ -15,14 +15,14 @@ void wrapSout(uint64_t &bitBoard)
 
 void wrapEast(uint64_t & bitBoard)
 {
-    const uint64_t mask = (uint64_t) 0x7f7f7f7f7f7f7f7f;
+    const uint64_t mask = uint64_t(0x7f7f7f7f7f7f7f7f);
     bitBoard &= mask;
     bitBoard <<= 1;
 }
 
 void wrapWest(uint64_t &bitBoard)
 {
-    const uint64_t mask = (uint64_t) 0xfefefefefefefefe;
+    const uint64_t mask = uint64_t(0xfefefefefefefefe);
     bitBoard &= mask;
     bitBoard >>= 1;
 }
@@ -61,7 +61,7 @@ int bitScanForward(uint64_t bitBoard){
         25, 39, 14, 33, 19, 30,  9, 24,
         13, 18,  8, 12,  7,  6,  5, 63
     };
-    const uint64_t deBrujin64 = (uint64_t) 0x03f79d71b4cb0a89;
+    const uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
     assert (bitBoard != 0);
     return index64[((bitBoard ^ (bitBoard-1)) * deBrujin64) >> 58];
 }
@@ -101,7 +101,7 @@ int bitScanReverse(uint64_t bitBoard){
         25, 39, 14, 33, 19, 30,  9, 24,
         13, 18,  8, 12,  7,  6,  5, 63
     };
-    const uint64_t deBrujin64 = (uint64_t) 0x03f79d71b4cb0a89;
+    const uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
     assert (bitBoard != 0);
     bitBoard |= bitBoard >> 1;
     bitBoard |= bitBoard >> 2;

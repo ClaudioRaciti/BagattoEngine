@@ -4,14 +4,14 @@
 
 #include "Move.hpp"
 #include "LookupTables.hpp"
-#include "BitBoards.hpp"
+#include "Board.hpp"
 
 class MoveGenerator{
 public:
     MoveGenerator();
     
-    std::vector<Move> generateQuietMoves(const BitBoards& t_bitBoards);
-    std::vector<Move> generateCaptures(const BitBoards& t_bitBoards);
+    std::vector<Move> generateQuietMoves (const Board&);
+    std::vector<Move> generateCaptures   (const Board&);
 private:
     const LookupTables& m_lookup;
 };
