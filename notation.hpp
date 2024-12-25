@@ -3,7 +3,7 @@
 const float CHECKMATE = 500.0f;
 
 enum pieceType {
-    white, black, pawns, knights, bishops, rooks, queens, kings
+    white, black, pawn, knight, bishop, rook, queen, king
 };
 
 

@@ -44,4 +44,5 @@ private:
     // then  6 bits for black king pos
     // last  7 bits for 50 move rule
     // one remainig bit
+    // space efficiency can be improved by using only 4 bits for ep square and the last remanining 3 bits for last captured piece
 };

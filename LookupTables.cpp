@@ -15,7 +15,7 @@ uint64_t LookupTables::getAttacks(int t_piece, int t_square, uint64_t t_occupied
     using AttackFunction = uint64_t (LookupTables::*)(uint64_t, int) const;
 
     static const AttackFunction attackFunction[] = {
-        &LookupTables::knightAttacks, // knights
+        &LookupTables::knightAttacks, // knight
         &LookupTables::bishopAttacks, // bishops
         &LookupTables::rookAttacks,   // rooks
         &LookupTables::queenAttacks,  // queens
