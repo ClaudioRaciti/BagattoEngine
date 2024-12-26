@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include "Move.hpp"
 
 class Board
 {
@@ -20,8 +21,8 @@ public:
     inline int  getHMC()        const {return (m_stateHist.back() >> 24) & 0x7f;} 
 
 
-    void makeMove();
-    void undoMove();
+    void makeMove(const Move &t_move);
+    void undoMove(const Move &t_move);
 
 private:
     inline void setKingSquare       (int t_side, int t_square) {m_stateHist.back() |= (t_square & 0x3f) << (12 + 6 * t_side);}
@@ -32,6 +33,8 @@ private:
     inline void toggleSideToMove()  {m_stateHist.back() ^= 0x01;}
     inline void incrementHMC()      {m_stateHist.back() += 0x1 << 24;}
     inline void resetHMC()          {m_stateHist.back() &= ~(0x7f << 24);}
+
+    void updateBitboards(const Move &t_move);
 
 private:
     uint64_t m_bitboard[8];

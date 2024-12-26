@@ -4,27 +4,42 @@
 MoveGenerator::MoveGenerator() : m_lookup{LookupTables::getInstance()}{
 }
 
+std::vector<Move> MoveGenerator::generateMoves(const Board &t_board)
+{
+    std::vector<Move> moveList;
+    moveList.reserve(256); // over the maximum number of moves possible for any legal position
+    generateQuiets(t_board, moveList);
+    generateCaptures(t_board, moveList);
+    return moveList;
+}
+
 std::vector<Move> MoveGenerator::generateQuiets(const Board &t_board)
 {
     std::vector<Move> moveList;
     moveList.reserve(256); // over the maximum number of moves possible for any legal position
-
-    generatePawnsQuiets(moveList, t_board);
-    generateCatstle(moveList, t_board);
-    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceQuiets(pieceType, moveList, t_board);
-
+    generateQuiets(t_board, moveList);
     return moveList;
+}
+
+void MoveGenerator::generateQuiets(const Board &t_board, std::vector<Move> &t_moveList)
+{
+    generatePawnsQuiets(t_moveList, t_board);
+    generateCatstle(t_moveList, t_board);
+    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceQuiets(pieceType, t_moveList, t_board);
 }
 
 std::vector<Move> MoveGenerator::generateCaptures(const Board &t_board)
 {    
     std::vector<Move> moveList;
     moveList.reserve(256); // over the maximum number of moves possible for any legal position
-
-    generatePawnsCaptures(moveList, t_board);
-    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, moveList, t_board);
-    
+    generateCaptures(t_board, moveList);
     return moveList;
+}
+
+void MoveGenerator::generateCaptures(const Board &t_board, std::vector<Move> &t_moveList)
+{
+    generatePawnsCaptures(t_moveList, t_board);
+    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, t_moveList, t_board);  
 }
 
 void MoveGenerator::generatePieceQuiets(int t_piece, std::vector<Move> &t_moveList, const Board &t_board)
