@@ -17,6 +17,9 @@ private:
     void generatePawnsQuiets(std::vector<Move> &t_moveList, const Board &t_board);
     void generateCatstle(std::vector<Move> &t_moveList, const Board &t_board); 
 
+    void generatePieceCaptures(int t_piece, std::vector<Move> &t_moveList, const Board &t_board);
+    void generatePawnsCaptures(std::vector<Move> &t_moveList, const Board &t_board);
+
     bool isSquareAttacked(const Board &t_board, int t_square, int t_attackingSide);
 private:
     const LookupTables& m_lookup;

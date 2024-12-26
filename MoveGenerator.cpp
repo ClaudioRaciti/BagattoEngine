@@ -8,10 +8,22 @@ std::vector<Move> MoveGenerator::generateQuiets(const Board &t_board)
 {
     std::vector<Move> moveList;
     moveList.reserve(256); // over the maximum number of moves possible for any legal position
+
     generatePawnsQuiets(moveList, t_board);
     generateCatstle(moveList, t_board);
-    for (int pieceType = knight; pieceType <= king; pieceType ++)
-        generatePieceQuiets(pieceType, moveList, t_board);
+    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceQuiets(pieceType, moveList, t_board);
+
+    return moveList;
+}
+
+std::vector<Move> MoveGenerator::generateCaptures(const Board &t_board)
+{    
+    std::vector<Move> moveList;
+    moveList.reserve(256); // over the maximum number of moves possible for any legal position
+
+    generatePawnsCaptures(moveList, t_board);
+    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, moveList, t_board);
+    
     return moveList;
 }
 
@@ -35,15 +47,13 @@ void MoveGenerator::generatePieceQuiets(int t_piece, std::vector<Move> &t_moveLi
 
 void MoveGenerator::generatePawnsQuiets(std::vector<Move> &t_moveList, const Board &t_board)
 {
-    static constexpr uint64_t rank4 = uint64_t(0x00000000ff000000);
-    static constexpr uint64_t rank5 = uint64_t(0x000000ff00000000);
-    static constexpr uint64_t rank8 = uint64_t(0xff00000000000000);
-    static constexpr uint64_t rank1 = uint64_t(0x00000000000000ff);
     uint64_t emptySet = ~(t_board.getBitboard(white) | t_board.getBitboard(black));
     uint64_t pawnSet, doublePushSet, pushSet, promoSet;
     int offset;
 
     if(t_board.getSideToMove() == white) {
+        static constexpr uint64_t rank4 = uint64_t(0x00000000ff000000);
+        static constexpr uint64_t rank8 = uint64_t(0xff00000000000000);
         pawnSet = t_board.getBitboard(pawn) | t_board.getBitboard(white);
         doublePushSet = (pawnSet << 8) & emptySet;
         doublePushSet = (doublePushSet << 8) & emptySet & rank4;
@@ -52,6 +62,8 @@ void MoveGenerator::generatePawnsQuiets(std::vector<Move> &t_moveList, const Boa
         offset = -8;
     }
     else {
+        static constexpr uint64_t rank5 = uint64_t(0x000000ff00000000);
+        static constexpr uint64_t rank1 = uint64_t(0x00000000000000ff);
         pawnSet = t_board.getBitboard(pawn) | t_board.getBitboard(black);
         doublePushSet = (pawnSet >> 8) & emptySet;
         doublePushSet = (doublePushSet >> 8) & emptySet & rank5;
@@ -128,6 +140,119 @@ void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &
             ! isSquareAttacked(t_board, g8, white)
         ) t_moveList.emplace_back(Move(e8, g8, kingCastle, king));
     }
+}
+
+void MoveGenerator::generatePieceCaptures(int t_piece, std::vector<Move> &t_moveList, const Board &t_board)
+{
+    int sideToMove = t_board.getSideToMove();
+    uint64_t pieceSet = t_board.getBitboard(t_piece) & t_board.getBitboard(sideToMove);
+    uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
+    uint64_t enemyPieces = t_board.getBitboard(1 - sideToMove);
+    
+    if (pieceSet) do {
+        int startingSquare = bitScanForward(pieceSet);
+        uint64_t attackSet = m_lookup.getAttacks(t_piece, startingSquare, occupied);
+
+        //serialize all captures moves
+        uint64_t captures = attackSet & enemyPieces;
+        if (captures) do {
+            int endSquare = bitScanForward(captures);
+            for (int captured  = pawn; captured < king; captured ++) 
+                if (uint64_t(1 << endSquare) & t_board.getBitboard(captured)) {
+                    t_moveList.emplace_back(Move(startingSquare, endSquare, capture, t_piece, captured));
+                    break;
+                }
+        } while (captures &= (captures -1));
+    } while (pieceSet &= (pieceSet - 1));
+}
+
+void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const Board &t_board)
+{
+    int sideToMove = t_board.getSideToMove();
+    uint64_t pawnSet = t_board.getBitboard(pawn) & t_board.getBitboard(sideToMove);
+    uint64_t enemyPieces = t_board.getBitboard(1 - sideToMove);
+    uint64_t eastCaptures, westCaptures, eastPromoCaptures, westPromoCaptures;
+    int eastOffset, westOffset;
+    
+    if(t_board.getSideToMove() == white) {
+        static constexpr uint64_t row8 = uint64_t(0xff00000000000000);
+        eastCaptures = (cpyWrapEast(pawnSet) << 8 & enemyPieces) & ~row8;
+        westCaptures = (cpyWrapWest(pawnSet) << 8 & enemyPieces) & ~row8;
+        eastPromoCaptures = (cpyWrapEast(pawnSet) << 8 & enemyPieces) & row8;
+        westPromoCaptures = (cpyWrapWest(pawnSet) << 8 & enemyPieces) & row8;
+        eastOffset = -9;
+        westOffset = -7;
+
+        if(t_board.getEpState() == true){
+            int epSquare = t_board.getEpSquare();
+            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare + 1, epSquare + 8, enPassant, pawn, pawn));
+            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare - 1, epSquare + 8, enPassant, pawn, pawn));
+        }
+    }
+    else {
+        static constexpr uint64_t row1 = uint64_t(0x00000000000000ff);
+        eastCaptures = (cpyWrapEast(pawnSet) >> 8 & enemyPieces) & ~row1;
+        westCaptures = (cpyWrapWest(pawnSet) >> 8 & enemyPieces) & ~row1;
+        eastPromoCaptures = (cpyWrapEast(pawnSet) >> 8 & enemyPieces) & row1;
+        westPromoCaptures = (cpyWrapWest(pawnSet) >> 8 & enemyPieces) & row1;
+        eastOffset = 7;
+        westOffset = 9;
+
+
+        if(t_board.getEpState() == true){
+            int epSquare = t_board.getEpSquare();
+            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare + 1, epSquare - 8, enPassant, pawn, pawn));
+            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare - 1, epSquare - 8, enPassant, pawn, pawn));
+        }
+    }
+
+    if (westCaptures) do {
+        int endSq = bitScanForward(westCaptures);
+        int startSq = endSq + westOffset;
+        for (int captured  = pawn; captured < king; captured ++) 
+            if (uint64_t(1 << endSq) & t_board.getBitboard(captured)) {
+                t_moveList.emplace_back(Move(startSq, endSq, capture, pawn, captured));
+                break;
+            }
+    } while (westCaptures &= (westCaptures - 1));
+
+
+    if (eastCaptures) do {
+        int endSq = bitScanForward(eastCaptures);
+        int startSq = endSq + eastOffset;
+        for (int captured  = pawn; captured < king; captured ++) 
+            if (uint64_t(1 << endSq) & t_board.getBitboard(captured)) {
+                t_moveList.emplace_back(Move(startSq, endSq, capture, pawn, captured));
+                break;
+            }
+    } while (eastCaptures &= (eastCaptures - 1));
+
+
+    if (eastPromoCaptures) do {
+        int endSq = bitScanForward(eastPromoCaptures);
+        int startSq = endSq + eastOffset;
+        for (int captured  = pawn; captured < king; captured ++) 
+            if (uint64_t(1 << endSq) & t_board.getBitboard(captured)) {
+                t_moveList.emplace_back(Move(startSq, endSq, knightPromoCapture, pawn, captured));
+                t_moveList.emplace_back(Move(startSq, endSq, bishopPromoCapture, pawn, captured));
+                t_moveList.emplace_back(Move(startSq, endSq, rookPromoCapture, pawn, captured));
+                t_moveList.emplace_back(Move(startSq, endSq, queenPromoCapture, pawn, captured));
+                break;
+            }
+    } while (eastPromoCaptures &= (eastPromoCaptures - 1));
+
+    if (westPromoCaptures) do {
+        int endSq = bitScanForward(westPromoCaptures);
+        int startSq = endSq + westOffset;
+        for (int captured  = pawn; captured < king; captured ++) 
+            if (uint64_t(1 << endSq) & t_board.getBitboard(captured)) {
+                t_moveList.emplace_back(Move(startSq, endSq, knightPromoCapture, pawn, captured));
+                t_moveList.emplace_back(Move(startSq, endSq, bishopPromoCapture, pawn, captured));
+                t_moveList.emplace_back(Move(startSq, endSq, rookPromoCapture, pawn, captured));
+                t_moveList.emplace_back(Move(startSq, endSq, queenPromoCapture, pawn, captured));
+                break;
+            }
+    } while (westPromoCaptures &= (westPromoCaptures - 1));
 }
 
 bool MoveGenerator::isSquareAttacked(const Board &t_board, int t_square, int t_attackingSide)
