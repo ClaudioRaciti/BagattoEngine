@@ -122,6 +122,7 @@ LookupTables::LookupTables() :
     initRayAttacks();
     initKnightAttacks();
     initKingAttacks();
+    initPawnAttacks();
     initMagicMoves();
 }
 
@@ -207,6 +208,18 @@ void LookupTables::initKingAttacks()
         uint64_t westDir = cpyWrapWest(kingPosition);
         m_kingAttacks[sq] |= westDir | westDir << 8 | westDir >> 8;
     }
+}
+
+void LookupTables::initPawnAttacks()
+{
+    uint64_t pawnPosition = (uint64_t) 1;
+    for (int sq = 0; sq < 64; sq ++ , pawnPosition <<= 1){
+        uint64_t nortDir = pawnPosition << 8;
+        uint64_t soutDir = pawnPosition >> 8;
+
+        m_pawnAttacks[sq][white] = cpyWrapEast(nortDir) | cpyWrapWest(nortDir);
+        m_pawnAttacks[sq][black] = cpyWrapEast(soutDir) | cpyWrapWest(soutDir);
+    }    
 }
 
 void LookupTables::initMagicMoves()

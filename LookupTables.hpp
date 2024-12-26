@@ -15,6 +15,7 @@ public:
     inline uint64_t rookAttacks   (uint64_t t_occupied, int t_square) const {return m_rMagicDb[t_square][((t_occupied & m_rMask[t_square]) * m_rMagic[t_square]) >> m_rShift[t_square]];}
     inline uint64_t bishopAttacks (uint64_t t_occupied, int t_square) const {return m_bMagicDb[t_square][((t_occupied & m_bMask[t_square]) * m_bMagic[t_square]) >> m_bShift[t_square]];}
     inline uint64_t queenAttacks  (uint64_t t_occupied, int t_square) const {return rookAttacks(t_occupied, t_square) | bishopAttacks(t_occupied, t_square);}
+    inline uint64_t pawnAttacks(int t_square, int t_sideToMove) const {return m_pawnAttacks[t_square][t_sideToMove];}
 
     uint64_t getAttacks (int t_piece, int t_square, uint64_t t_occupied) const;
 
@@ -25,6 +26,7 @@ private:
     void initRayAttacks();
     void initKnightAttacks();
     void initKingAttacks();
+    void initPawnAttacks();
     void initMagicMoves();
 
     uint64_t initMagicOcc(int *, int, uint64_t);
@@ -37,6 +39,7 @@ private:
     uint64_t m_rayAttacks[64][8]; 
     uint64_t m_knightAttacks[64];
     uint64_t m_kingAttacks[64];
+    uint64_t m_pawnAttacks[64][2];
 
     const unsigned int m_rShift[64];
     const uint64_t m_rMask[64];

@@ -31,7 +31,7 @@ bool operator!=(const Move &thisObj, const Move &otherObj)
 
 std::ostream &operator<<(std::ostream &os, const Move &cm)
 {
-    static std::map<int, std::string> squares{
+    std::map<int, std::string> squares{
         { 0,"a1"},{ 1,"b1"},{ 2,"c1"},{ 3,"d1"},{ 4,"e1"},{ 5,"f1"},{ 6,"g1"},{ 7,"h1"},
         { 8,"a2"},{ 9,"b2"},{10,"c2"},{11,"d2"},{12,"e2"},{13,"f2"},{14,"g2"},{15,"h2"},
         {16,"a3"},{17,"b3"},{18,"c3"},{19,"d3"},{20,"e3"},{21,"f3"},{22,"g3"},{23,"h3"},
@@ -42,12 +42,12 @@ std::ostream &operator<<(std::ostream &os, const Move &cm)
         {56,"a8"},{57,"b8"},{58,"c8"},{59,"d8"},{60,"e8"},{61,"f8"},{62,"g8"},{63,"h8"}
     };
     
-    static std::map<int, std::string> pieces{
+    std::map<int, std::string> pieces{
         {0,"white"},{1,"black"},{2,"pawn"},{3,"knight"},{4,"bishop"},{5,"rook"},
         {6,"queen"},{7,"king"}
     };
 
-    static std::map<int, std::string> flags{
+    std::map<int, std::string> flags{
         {0,"quiet"},{1,"double push"},{2,"kingside castle"},{3,"queenside castle"},
         {4,"capture"},{5,"en passant"},{8,"promotion to knight"},{9,"promotion to bishop"},
         {10,"promotion to rook"},{11,"promotion to queen"},{12,"capture and promotion\

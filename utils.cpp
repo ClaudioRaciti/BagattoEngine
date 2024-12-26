@@ -3,55 +3,10 @@
 
 #include <cassert>
 
-void wrapNort(uint64_t &bitBoard)
-{
-    bitBoard <<= 8;
-}
-
-void wrapSout(uint64_t &bitBoard)
-{
-    bitBoard >>= 8;
-}
-
-void wrapEast(uint64_t & bitBoard)
-{
-    const uint64_t mask = uint64_t(0x7f7f7f7f7f7f7f7f);
-    bitBoard &= mask;
-    bitBoard <<= 1;
-}
-
-void wrapWest(uint64_t &bitBoard)
-{
-    const uint64_t mask = uint64_t(0xfefefefefefefefe);
-    bitBoard &= mask;
-    bitBoard >>= 1;
-}
-
-uint64_t cpyWrapNort(uint64_t bitBoard){
-    wrapNort(bitBoard);
-    return bitBoard;
-}
-
-uint64_t cpyWrapSout(uint64_t bitBoard){
-    wrapSout(bitBoard);
-    return bitBoard;
-}
-
-uint64_t cpyWrapEast(uint64_t bitBoard){
-    wrapEast(bitBoard);
-    return bitBoard;
-}
-
-
-uint64_t cpyWrapWest(uint64_t bitBoard){
-    wrapWest(bitBoard);
-    return bitBoard;
-}
-
 // Finds position of Least Significant 1 Bit
 int bitScanForward(uint64_t bitBoard){
     //Reference table for bitscans
-    const int index64[64] = {
+    static constexpr int index64[64] = {
          0, 47,  1, 56, 48, 27,  2, 60,
         57, 49, 41, 37, 28, 16,  3, 61,
         54, 58, 35, 52, 50, 42, 21, 44,
@@ -61,7 +16,7 @@ int bitScanForward(uint64_t bitBoard){
         25, 39, 14, 33, 19, 30,  9, 24,
         13, 18,  8, 12,  7,  6,  5, 63
     };
-    const uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
+    static constexpr uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
     assert (bitBoard != 0);
     return index64[((bitBoard ^ (bitBoard-1)) * deBrujin64) >> 58];
 }
@@ -91,7 +46,7 @@ int popCount(uint64_t bitBoard)
 // Finds position of Most Significant 1 Bit
 int bitScanReverse(uint64_t bitBoard){
     // Reference table for bitscans
-    const int index64[64] = {
+    static constexpr int index64[64] = {
          0, 47,  1, 56, 48, 27,  2, 60,
         57, 49, 41, 37, 28, 16,  3, 61,
         54, 58, 35, 52, 50, 42, 21, 44,
@@ -101,7 +56,7 @@ int bitScanReverse(uint64_t bitBoard){
         25, 39, 14, 33, 19, 30,  9, 24,
         13, 18,  8, 12,  7,  6,  5, 63
     };
-    const uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
+    static constexpr uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
     assert (bitBoard != 0);
     bitBoard |= bitBoard >> 1;
     bitBoard |= bitBoard >> 2;
