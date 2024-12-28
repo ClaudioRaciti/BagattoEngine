@@ -1,14 +1,21 @@
+#include "Debugger.hpp"
+#include <chrono>
 #include <iostream>
-#include <vector>
-#include <cstdint>
-#include "Move.hpp"
-#include "utils.hpp"
+using namespace std::chrono;
 
 int main(int argc, char **argv){
-    std::vector<uint32_t> m_moveHist;
-    m_moveHist.emplace_back(uint32_t(0x3f));
-    m_moveHist.emplace_back(m_moveHist.back());
-    m_moveHist.back() &= 0x0;
-    std::cout<<m_moveHist[0]<< std::endl;
+    Debugger debugger;
+
+    // Get starting timepoint
+    auto start = high_resolution_clock::now();
+
+    std::cout << debugger.getPerft(7) << std::endl;
+
+    // Get ending timepoint
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(stop - start);
+
+    std::cout << "Time taken by function: "<< duration.count() << " milliseconds" << std::endl;
+
     return 0;
 }

@@ -2,36 +2,56 @@
 
 Board::Board()
 {
+    m_bitboard[white]   = (uint64_t) 0x000000000000ffff;
+    m_bitboard[black]   = (uint64_t) 0xffff000000000000;
+    m_bitboard[pawn]    = (uint64_t) 0x00ff00000000ff00;
+    m_bitboard[knight]  = (uint64_t) 0x4200000000000042;
+    m_bitboard[bishop]  = (uint64_t) 0x2400000000000024;
+    m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
+    m_bitboard[queen]   = (uint64_t) 0x0800000000000008;
+    m_bitboard[king]    = (uint64_t) 0x1000000000000010;
+
+    // m_bitboard[white]   = (uint64_t) 0x000000181024ff91;
+    // m_bitboard[black]   = (uint64_t) 0x917d730002800000;
+    // m_bitboard[pawn]    = (uint64_t) 0x002d50081280e700;
+    // m_bitboard[knight]  = (uint64_t) 0x0000221000040000;
+    // m_bitboard[bishop]  = (uint64_t) 0x0040010000001800;
+    // m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
+    // m_bitboard[queen]   = (uint64_t) 0x0010000000200000;
+    // m_bitboard[king]    = (uint64_t) 0x1000000000000010;
     m_stateHist.reserve(20);
     m_stateHist.emplace_back(uint32_t(0x1e));
+    setKingSquare(white, e1);
+    setKingSquare(black, e8);
 }
 
 void Board::makeMove(const Move &t_move)
 {
-    // ALWAYS removes en-passant
+    // ALWAYS removes en-passant and en-passant square
     // removes castling depending on the move type
     static constexpr uint32_t stateMask[64] = {
-        0xffffffd7, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffd5, 0xffffffdf, 0xffffffdf, 0xffffffdd,
-        0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf,
-        0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf,
-        0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf,
-        0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf,
-        0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf,
-        0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffdf,
-        0xffffffcf, 0xffffffdf, 0xffffffdf, 0xffffffdf, 0xffffffcb, 0xffffffdf, 0xffffffdf, 0xffffffdb
+        0xfffff017, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff015, 0xfffff01f, 0xfffff01f, 0xfffff01d,
+        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
+        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
+        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
+        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
+        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
+        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
+        0xfffff00f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff00b, 0xfffff01f, 0xfffff01f, 0xfffff01b
     };
     m_stateHist.emplace_back(m_stateHist.back());
     m_stateHist.back() &= stateMask[t_move.startingSquare()] & stateMask[t_move.endSquare()];
     if (t_move.isCapture() || t_move.piece() == pawn) resetHMC(); else incrementHMC();
+    if (t_move.piece() == king) setKingSquare(getSideToMove(), t_move.endSquare());
+    if (t_move.isDoublePush()) {m_stateHist.back() |= 1 << 5; m_stateHist.back() |= (t_move.endSquare() & 0x3f) << 6;}
     updateBitboards(t_move);
     toggleSideToMove();
 }
 
 void Board::undoMove(const Move &t_move)
 {
-    toggleSideToMove();
-    updateBitboards(t_move);
     m_stateHist.pop_back();
+    updateBitboards(t_move);
 }
 
 void Board::updateBitboards(const Move &t_move)
@@ -42,21 +62,15 @@ void Board::updateBitboards(const Move &t_move)
     m_bitboard[t_move.piece()] ^= moveMask;
 
     switch (t_move.flag()){
-    case quiet:
-        break;
-    case doublePush:
-        setEpState(true);
-        setEpSquare(t_move.endSquare());
-        break;
     case kingCastle:
-        static constexpr uint64_t rookMask[2] = {uint64_t(0x00000000000000a0), uint64_t(0xa000000000000000)};
-        m_bitboard[getSideToMove()] ^= rookMask[getSideToMove()];
-        m_bitboard[rook] ^= rookMask[getSideToMove()];
+        static constexpr uint64_t kingCastleMask[2] = {uint64_t(0x00000000000000a0), uint64_t(0xa000000000000000)};
+        m_bitboard[getSideToMove()] ^= kingCastleMask[getSideToMove()];
+        m_bitboard[rook] ^= kingCastleMask[getSideToMove()];
         break;
     case queenCastle:
-        static constexpr uint64_t rookMask[2] = {uint64_t(0x0000000000000009), uint64_t(0x0900000000000000)};
-        m_bitboard[getSideToMove()] ^= rookMask[getSideToMove()];
-        m_bitboard[rook] ^= rookMask[getSideToMove()];
+        static constexpr uint64_t queenCastleMask[2] = {uint64_t(0x0000000000000009), uint64_t(0x0900000000000000)};
+        m_bitboard[getSideToMove()] ^= queenCastleMask[getSideToMove()];
+        m_bitboard[rook] ^= queenCastleMask[getSideToMove()];
         break;
     case capture:
         m_bitboard[1-getSideToMove()] ^= endSqMask;

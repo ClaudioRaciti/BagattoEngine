@@ -4,26 +4,26 @@
 
 LookupTables* LookupTables::m_instance = nullptr;
 
-LookupTables &LookupTables::getInstance()
+const LookupTables &LookupTables::getInstance()
 {
     if (m_instance == nullptr) m_instance = new LookupTables();
     return *m_instance;
 }
 
-uint64_t LookupTables::getAttacks(int t_piece, int t_square, uint64_t t_occupied) const
-{
-    using AttackFunction = uint64_t (LookupTables::*)(uint64_t, int) const;
+// uint64_t LookupTables::getAttacks(int t_piece, int t_square, uint64_t t_occupied) const
+// {
+//     using AttackFunction = uint64_t (LookupTables::*)(uint64_t, int) const;
 
-    static const AttackFunction attackFunction[] = {
-        &LookupTables::knightAttacks, // knight
-        &LookupTables::bishopAttacks, // bishops
-        &LookupTables::rookAttacks,   // rooks
-        &LookupTables::queenAttacks,  // queens
-        &LookupTables::kingAttacks    // kings
-    };
+//     static const AttackFunction attackFunction[] = {
+//         &LookupTables::knightAttacks, // knight
+//         &LookupTables::bishopAttacks, // bishops
+//         &LookupTables::rookAttacks,   // rooks
+//         &LookupTables::queenAttacks,  // queens
+//         &LookupTables::kingAttacks    // kings
+//     };
     
-    return (m_instance->*attackFunction[t_piece - 3])(t_occupied, t_square);
-}
+//     return (m_instance->*attackFunction[t_piece - 3])(t_occupied, t_square);
+// }
 
 LookupTables::LookupTables() :
    m_rShift {

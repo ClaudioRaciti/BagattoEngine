@@ -25,11 +25,9 @@ public:
     void undoMove(const Move &t_move);
 
 private:
-    inline void setKingSquare       (int t_side, int t_square) {m_stateHist.back() |= (t_square & 0x3f) << (12 + 6 * t_side);}
+    inline void setKingSquare       (int t_side, int t_square) {m_stateHist.back() &= ~(0x3f << (12 + 6 * t_side));m_stateHist.back() |= (t_square & 0x3f) << (12 + 6 * t_side);}
     inline void removeShortCastle   (int t_side)    {m_stateHist.back() &= ~(0x1 << (t_side + 1));}
     inline void removeLongCastle    (int t_side)    {m_stateHist.back() &= ~(0x1 << (t_side + 3));}
-    inline void setEpState          (bool t_state)  {if (t_state) m_stateHist.back() |= 1 << 5; else m_stateHist.back() &= ~(1 << 5);}
-    inline void setEpSquare         (int t_square)  {m_stateHist.back() |= (t_square & 0x3f) << 6; }
     inline void toggleSideToMove()  {m_stateHist.back() ^= 0x01;}
     inline void incrementHMC()      {m_stateHist.back() += 0x1 << 24;}
     inline void resetHMC()          {m_stateHist.back() &= ~(0x7f << 24);}

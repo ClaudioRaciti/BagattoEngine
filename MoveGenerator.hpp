@@ -8,7 +8,7 @@
 
 class MoveGenerator{
 public:
-    MoveGenerator();
+    MoveGenerator() : m_lookup{LookupTables::getInstance()} {};
     std::vector<Move> generateMoves(const Board&);
     std::vector<Move> generateQuiets(const Board&);
     void generateQuiets(const Board&, std::vector<Move> &);
