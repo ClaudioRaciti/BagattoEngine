@@ -8,7 +8,7 @@ enum pieceType {
 
 
 enum rayDirections {
-    soWe, sout, soEa, west, east, noWe, nort, noEa
+    soWe, sout, soEa, east, noEa, nort, noWe, west
 };
 
 enum algebraicNotation{

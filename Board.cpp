@@ -2,23 +2,23 @@
 
 Board::Board()
 {
-    m_bitboard[white]   = (uint64_t) 0x000000000000ffff;
-    m_bitboard[black]   = (uint64_t) 0xffff000000000000;
-    m_bitboard[pawn]    = (uint64_t) 0x00ff00000000ff00;
-    m_bitboard[knight]  = (uint64_t) 0x4200000000000042;
-    m_bitboard[bishop]  = (uint64_t) 0x2400000000000024;
-    m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
-    m_bitboard[queen]   = (uint64_t) 0x0800000000000008;
-    m_bitboard[king]    = (uint64_t) 0x1000000000000010;
-
-    // m_bitboard[white]   = (uint64_t) 0x000000181024ff91;
-    // m_bitboard[black]   = (uint64_t) 0x917d730002800000;
-    // m_bitboard[pawn]    = (uint64_t) 0x002d50081280e700;
-    // m_bitboard[knight]  = (uint64_t) 0x0000221000040000;
-    // m_bitboard[bishop]  = (uint64_t) 0x0040010000001800;
+    // m_bitboard[white]   = (uint64_t) 0x000000000000ffff;
+    // m_bitboard[black]   = (uint64_t) 0xffff000000000000;
+    // m_bitboard[pawn]    = (uint64_t) 0x00ff00000000ff00;
+    // m_bitboard[knight]  = (uint64_t) 0x4200000000000042;
+    // m_bitboard[bishop]  = (uint64_t) 0x2400000000000024;
     // m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
-    // m_bitboard[queen]   = (uint64_t) 0x0010000000200000;
+    // m_bitboard[queen]   = (uint64_t) 0x0800000000000008;
     // m_bitboard[king]    = (uint64_t) 0x1000000000000010;
+
+    m_bitboard[white]   = (uint64_t) 0x000000181024ff91;
+    m_bitboard[black]   = (uint64_t) 0x917d730002800000;
+    m_bitboard[pawn]    = (uint64_t) 0x002d50081280e700;
+    m_bitboard[knight]  = (uint64_t) 0x0000221000040000;
+    m_bitboard[bishop]  = (uint64_t) 0x0040010000001800;
+    m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
+    m_bitboard[queen]   = (uint64_t) 0x0010000000200000;
+    m_bitboard[king]    = (uint64_t) 0x1000000000000010;
     m_stateHist.reserve(20);
     m_stateHist.emplace_back(uint32_t(0x1e));
     setKingSquare(white, e1);

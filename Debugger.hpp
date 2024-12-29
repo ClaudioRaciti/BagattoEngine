@@ -13,6 +13,7 @@ public:
     uint64_t getPerft(int t_depth);
 private:
     bool isInCheck();
+    bool isCheck();
     bool isSqAttacked(int t_square, int t_attackingSide);
 private:
     Board m_board;

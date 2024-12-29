@@ -9,7 +9,7 @@ int main(int argc, char **argv){
     // Get starting timepoint
     auto start = high_resolution_clock::now();
 
-    std::cout << debugger.getPerft(7) << std::endl;
+    std::cout << debugger.getPerft(6) << std::endl;
 
     // Get ending timepoint
     auto stop = high_resolution_clock::now();

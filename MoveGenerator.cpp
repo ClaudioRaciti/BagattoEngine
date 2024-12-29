@@ -40,6 +40,63 @@ void MoveGenerator::generateCaptures(const Board &t_board, std::vector<Move> &t_
     for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, t_moveList, t_board);  
 }
 
+void MoveGenerator::evadeCheck(const Board &t_board, std::vector<Move> &t_moveList)
+{
+    generatePieceQuiets(king, t_moveList, t_board);
+    
+    int sideToMove = t_board.getSideToMove();
+    int kingSquare = t_board.getKingSquare(sideToMove);
+    uint64_t checkers = getAttacksTo(t_board, kingSquare, 1 - sideToMove);
+    if(popCount(checkers) == 1){
+        int checkingSquare = bitScanForward(checkers);
+        int checkingPiece;
+        for (checkingPiece = pawn; checkingPiece < king; checkingPiece ++)
+            if (t_board.getBitboard(checkingPiece) & checkers) break;
+        
+        captureAttacker(checkingPiece, checkingSquare, t_moveList, t_board);
+        //find out wich piece is the attacker
+        //if attacker is sliding piece: block
+        if (checkingPiece == bishop || checkingPiece == queen){
+            uint64_t blockableSquares;
+            if (m_lookup.rayAttacks(kingSquare, soWe) & checkers) {
+                blockableSquares = m_lookup.bishopAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, soWe) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+            else if (m_lookup.rayAttacks(kingSquare, noWe) & checkers) {
+                blockableSquares = m_lookup.bishopAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, noWe) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+            else if (m_lookup.rayAttacks(kingSquare, soEa) & checkers) {
+                blockableSquares = m_lookup.bishopAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, soEa) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+            else if (m_lookup.rayAttacks(kingSquare, noEa) & checkers) {
+                blockableSquares = m_lookup.bishopAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, noEa) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+        }
+        if (checkingPiece == rook || checkingPiece == queen){
+            uint64_t blockableSquares;
+            if (m_lookup.rayAttacks(kingSquare, sout) & checkers) {
+                blockableSquares = m_lookup.rookAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, sout) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+            else if (m_lookup.rayAttacks(kingSquare, nort) & checkers) {
+                blockableSquares = m_lookup.rookAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, nort) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+            else if (m_lookup.rayAttacks(kingSquare, east) & checkers) {
+                blockableSquares = m_lookup.rookAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, east) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+            else if (m_lookup.rayAttacks(kingSquare, west) & checkers) {
+                blockableSquares = m_lookup.rookAttacks(checkers, kingSquare) & m_lookup.rayAttacks(kingSquare, west) & ~checkers;
+                blockAttacker(blockableSquares, t_moveList, t_board);
+            }
+        }
+    }
+}
+
 void MoveGenerator::generatePieceQuiets(int t_piece, std::vector<Move> &t_moveList, const Board &t_board)
 {
     uint64_t pieceSet = t_board.getBitboard(t_piece) & t_board.getBitboard(t_board.getSideToMove());
@@ -199,8 +256,10 @@ void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const B
 
         if(t_board.getEpState() == true){
             int epSquare = t_board.getEpSquare();
-            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare + 1, epSquare + 8, enPassant, pawn, pawn));
-            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare - 1, epSquare + 8, enPassant, pawn, pawn));
+            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) 
+                t_moveList.emplace_back(Move(epSquare + 1, epSquare + 8, enPassant, pawn, pawn));
+            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) 
+                t_moveList.emplace_back(Move(epSquare - 1, epSquare + 8, enPassant, pawn, pawn));
         }
     }
     else {
@@ -215,8 +274,10 @@ void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const B
 
         if(t_board.getEpState() == true){
             int epSquare = t_board.getEpSquare();
-            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare + 1, epSquare - 8, enPassant, pawn, pawn));
-            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) t_moveList.emplace_back(Move(epSquare - 1, epSquare - 8, enPassant, pawn, pawn));
+            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) 
+                t_moveList.emplace_back(Move(epSquare + 1, epSquare - 8, enPassant, pawn, pawn));
+            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) 
+                t_moveList.emplace_back(Move(epSquare - 1, epSquare - 8, enPassant, pawn, pawn));
         }
     }
 
@@ -273,6 +334,151 @@ void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const B
     } while (westPromoCaptures &= (westPromoCaptures - 1));
 }
 
+void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vector<Move> &t_moveList, const Board &t_board)
+{
+    uint64_t attackerMask = uint64_t(1) << t_attackerSq;
+    int sideToMove = t_board.getSideToMove();
+    //insert captures to the attacker
+    //pawn logic
+    uint64_t pawnSet = t_board.getBitboard(pawn) & t_board.getBitboard(sideToMove);
+    uint64_t eastCaptures, westCaptures, eastPromoCaptures, westPromoCaptures;
+    int eastOffset, westOffset;
+    
+    if(sideToMove == white) {
+        static constexpr uint64_t row8 = uint64_t(0xff00000000000000);
+        eastCaptures = (cpyWrapEast(pawnSet) << 8 & attackerMask) & ~row8;
+        westCaptures = (cpyWrapWest(pawnSet) << 8 & attackerMask) & ~row8;
+        eastPromoCaptures = (cpyWrapEast(pawnSet) << 8 & attackerMask) & row8;
+        westPromoCaptures = (cpyWrapWest(pawnSet) << 8 & attackerMask) & row8;
+        eastOffset = -9;
+        westOffset = -7;
+
+        if((t_board.getEpState() == true) && (t_board.getEpSquare() == t_attackerSq)){
+            if (cpyWrapEast(attackerMask) & pawnSet) 
+                t_moveList.emplace_back(Move(t_attackerSq + 1, t_attackerSq + 8, enPassant, pawn, pawn));
+            if (cpyWrapWest(attackerMask) & pawnSet) 
+                t_moveList.emplace_back(Move(t_attackerSq - 1, t_attackerSq + 8, enPassant, pawn, pawn));
+        }
+    }
+    else {
+        static constexpr uint64_t row1 = uint64_t(0x00000000000000ff);
+        eastCaptures = (cpyWrapEast(pawnSet) >> 8 & attackerMask) & ~row1;
+        westCaptures = (cpyWrapWest(pawnSet) >> 8 & attackerMask) & ~row1;
+        eastPromoCaptures = (cpyWrapEast(pawnSet) >> 8 & attackerMask) & row1;
+        westPromoCaptures = (cpyWrapWest(pawnSet) >> 8 & attackerMask) & row1;
+        eastOffset = 7;
+        westOffset = 9;
+
+        if((t_board.getEpState() == true) && (t_board.getEpSquare() == t_attackerSq)){
+            if (cpyWrapEast(attackerMask) & pawnSet) 
+                t_moveList.emplace_back(Move(t_attackerSq + 1, t_attackerSq - 8, enPassant, pawn, pawn));
+            if (cpyWrapWest(attackerMask) & pawnSet) 
+                t_moveList.emplace_back(Move(t_attackerSq - 1, t_attackerSq - 8, enPassant, pawn, pawn));
+        }
+    }
+
+    if (westCaptures) t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, capture, pawn, t_attacker));
+    if (eastCaptures) t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, capture, pawn, t_attacker));
+    if (westPromoCaptures){
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, knightPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, bishopPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, rookPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, queenPromoCapture, pawn, t_attacker));
+    }
+    if (eastPromoCaptures){
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, knightPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, bishopPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, rookPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, queenPromoCapture, pawn, t_attacker));
+    }
+
+    //pieces logic
+    for (int capturingPiece = knight; capturingPiece <= king; capturingPiece ++){
+        uint64_t pieceSet = t_board.getBitboard(capturingPiece) & t_board.getBitboard(sideToMove);
+        uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
+        
+        if (pieceSet) do {
+            int startingSquare = bitScanForward(pieceSet);
+            uint64_t attackSet = m_lookup.getAttacks(capturingPiece, startingSquare, occupied);
+            uint64_t captureSet = attackSet & attackerMask;
+            if (captureSet) t_moveList.emplace_back(Move(startingSquare, t_attackerSq, capture, capturingPiece, t_attacker));
+        } while (pieceSet &= (pieceSet - 1));
+    }
+}
+
+void MoveGenerator::blockAttacker(uint64_t t_blockableSquares, std::vector<Move> &t_moveList, const Board &t_board)
+{
+    
+    uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
+    uint64_t emptySet = ~occupied;
+    uint64_t pawnSet, doublePushSet, pushSet, promoSet;
+    int offset;
+
+    if(t_board.getSideToMove() == white) {
+        static constexpr uint64_t rank4 = uint64_t(0x00000000ff000000);
+        static constexpr uint64_t rank8 = uint64_t(0xff00000000000000);
+        pawnSet = t_board.getBitboard(pawn) & t_board.getBitboard(white);
+        doublePushSet = (pawnSet << 8) & emptySet;
+        doublePushSet = (doublePushSet << 8) & emptySet & rank4 & t_blockableSquares;
+        pushSet = (pawnSet << 8) & emptySet & ~rank8 & t_blockableSquares;
+        promoSet = (pawnSet << 8) & emptySet & rank8 & t_blockableSquares; 
+        offset = -8;
+    }
+    else {
+        static constexpr uint64_t rank5 = uint64_t(0x000000ff00000000);
+        static constexpr uint64_t rank1 = uint64_t(0x00000000000000ff);
+        pawnSet = t_board.getBitboard(pawn) & t_board.getBitboard(black);
+        doublePushSet = (pawnSet >> 8) & emptySet;
+        doublePushSet = (doublePushSet >> 8) & emptySet & rank5 & t_blockableSquares;
+        pushSet = (pawnSet >> 8) & emptySet & ~rank1 & t_blockableSquares;
+        promoSet = (pawnSet >> 8) & emptySet & rank1 & t_blockableSquares; 
+        offset = 8;
+    }
+
+    if (pushSet) do {
+        int endSq = bitScanForward(pushSet);
+        int startSq = endSq + offset;
+        t_moveList.emplace_back(Move(startSq, endSq, quiet, pawn));
+    } while (pushSet &= (pushSet - 1));
+
+    if (promoSet) do {
+        int endSq = bitScanForward(promoSet);
+        int startSq = endSq + offset;
+        t_moveList.emplace_back(Move(startSq, endSq, knightPromo, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, bishopPromo, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, rookPromo, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, queenPromo, pawn));
+    } while (promoSet &= (promoSet - 1));
+
+    if (doublePushSet) do {
+        int endSq = bitScanForward(doublePushSet);
+        int startSq = endSq + (2 * offset);
+        t_moveList.emplace_back(Move(startSq, endSq, doublePush, pawn));
+    } while (doublePushSet  &= (doublePushSet - 1));
+
+
+    for(int piece = knight; piece < king; piece ++){
+        uint64_t pieceSet = t_board.getBitboard(piece) & t_board.getBitboard(t_board.getSideToMove());
+        if (pieceSet) do {
+            int startingSquare = bitScanForward(pieceSet);
+            uint64_t attackSet = m_lookup.getAttacks(piece, startingSquare, occupied);
+
+            uint64_t blocks = attackSet & t_blockableSquares;
+            if (blocks) do {
+                int endSquare = bitScanForward(blocks);
+                t_moveList.emplace_back(Move(startingSquare, endSquare, quiet, piece));
+            } while (blocks &= (blocks - 1));
+        } while (pieceSet &= (pieceSet - 1));
+    }
+}
+
+bool MoveGenerator::isCheck(const Board &t_board)
+{
+    int sideToMove = t_board.getSideToMove();
+    int kingSquare = t_board.getKingSquare(sideToMove);
+    return isSquareAttacked(t_board, kingSquare, 1 - sideToMove);
+}
+
 bool MoveGenerator::isSquareAttacked(const Board &t_board, int t_square, int t_attackingSide)
 {
     uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
@@ -286,4 +492,21 @@ bool MoveGenerator::isSquareAttacked(const Board &t_board, int t_square, int t_a
     } 
 
     return false;
+}
+
+uint64_t MoveGenerator::getAttacksTo(const Board &t_board, int t_square, int t_attackingSide)
+{
+    uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
+    uint64_t enemyPawns = t_board.getBitboard(pawn) & t_board.getBitboard(t_attackingSide);
+    uint64_t enemyKnights = t_board.getBitboard(knight) & t_board.getBitboard(t_attackingSide);
+    uint64_t enemyBihsops = t_board.getBitboard(bishop) & t_board.getBitboard(t_attackingSide);
+    uint64_t enemyRooks = t_board.getBitboard(rook) & t_board.getBitboard(t_attackingSide);
+    uint64_t enemyQueens = t_board.getBitboard(queen) & t_board.getBitboard(t_attackingSide);
+    uint64_t enemyKing = t_board.getBitboard(king) & t_board.getBitboard(t_attackingSide);
+
+    return (m_lookup.pawnAttacks(t_square, 1-t_attackingSide) & enemyPawns)
+        | (m_lookup.getAttacks(knight, t_square, occupied) & enemyKnights)
+        | (m_lookup.getAttacks(bishop, t_square, occupied) & (enemyBihsops | enemyQueens))
+        | (m_lookup.getAttacks(rook, t_square, occupied) & (enemyRooks | enemyQueens))
+        | (m_lookup.getAttacks(king, t_square, occupied) & enemyKing);
 }

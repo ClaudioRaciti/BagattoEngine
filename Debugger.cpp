@@ -13,8 +13,9 @@ uint64_t Debugger::getPerft(int t_depth)
     auto moveList = m_generator.generateMoves(m_board);
     for (auto move : moveList) {
         m_board.makeMove(move);
-        if(!isInCheck())
+        if(!isInCheck()){
             nodes += getPerft(t_depth - 1);
+        }
         m_board.undoMove(move);
     }
     return nodes;
@@ -25,8 +26,14 @@ bool Debugger::isInCheck()
 {
     int sideToMove = m_board.getSideToMove();
     int kingSquare = m_board.getKingSquare(1 - sideToMove);
-    if (isSqAttacked(kingSquare, sideToMove)) return true;
-    return false;
+    return isSqAttacked(kingSquare, sideToMove);
+}
+
+bool Debugger::isCheck()
+{
+    int sideToMove = m_board.getSideToMove();
+    int kingSquare = m_board.getKingSquare( sideToMove);
+    return isSqAttacked(kingSquare, 1 - sideToMove);
 }
 
 bool Debugger::isSqAttacked(int t_square, int t_attackingSide)

@@ -10,11 +10,12 @@ public:
 
     static const LookupTables& getInstance();
 
-    constexpr uint64_t knightAttacks (uint64_t t_occupied, int t_square) const {return m_knightAttacks[t_square];}
-    constexpr uint64_t kingAttacks   (uint64_t t_occupied, int t_square) const {return m_kingAttacks[t_square];}
-    constexpr uint64_t rookAttacks   (uint64_t t_occupied, int t_square) const {return m_rMagicDb[t_square][((t_occupied & m_rMask[t_square]) * m_rMagic[t_square]) >> m_rShift[t_square]];}
-    constexpr uint64_t bishopAttacks (uint64_t t_occupied, int t_square) const {return m_bMagicDb[t_square][((t_occupied & m_bMask[t_square]) * m_bMagic[t_square]) >> m_bShift[t_square]];}
-    constexpr uint64_t queenAttacks  (uint64_t t_occupied, int t_square) const {return rookAttacks(t_occupied, t_square) | bishopAttacks(t_occupied, t_square);}
+    constexpr uint64_t rayAttacks   (int t_square, int t_direction)     const {return m_rayAttacks[t_square][t_direction];}
+    constexpr uint64_t knightAttacks(uint64_t t_occupied, int t_square) const {return m_knightAttacks[t_square];}
+    constexpr uint64_t kingAttacks  (uint64_t t_occupied, int t_square) const {return m_kingAttacks[t_square];}
+    constexpr uint64_t rookAttacks  (uint64_t t_occupied, int t_square) const {return m_rMagicDb[t_square][((t_occupied & m_rMask[t_square]) * m_rMagic[t_square]) >> m_rShift[t_square]];}
+    constexpr uint64_t bishopAttacks(uint64_t t_occupied, int t_square) const {return m_bMagicDb[t_square][((t_occupied & m_bMask[t_square]) * m_bMagic[t_square]) >> m_bShift[t_square]];}
+    constexpr uint64_t queenAttacks (uint64_t t_occupied, int t_square) const {return rookAttacks(t_occupied, t_square) | bishopAttacks(t_occupied, t_square);}
     constexpr uint64_t pawnAttacks(int t_square, int t_sideToMove) const {return m_pawnAttacks[t_square][t_sideToMove];}
 
     constexpr uint64_t getAttacks(int t_piece, int t_square, uint64_t t_occupied) const {
