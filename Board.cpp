@@ -1,28 +1,86 @@
 #include "Board.hpp"
+#include "utils.hpp"
+#include <cassert>
+#include <bitset>
+
 
 Board::Board()
 {
-    // m_bitboard[white]   = (uint64_t) 0x000000000000ffff;
-    // m_bitboard[black]   = (uint64_t) 0xffff000000000000;
-    // m_bitboard[pawn]    = (uint64_t) 0x00ff00000000ff00;
-    // m_bitboard[knight]  = (uint64_t) 0x4200000000000042;
-    // m_bitboard[bishop]  = (uint64_t) 0x2400000000000024;
-    // m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
-    // m_bitboard[queen]   = (uint64_t) 0x0800000000000008;
-    // m_bitboard[king]    = (uint64_t) 0x1000000000000010;
-
-    m_bitboard[white]   = (uint64_t) 0x000000181024ff91;
-    m_bitboard[black]   = (uint64_t) 0x917d730002800000;
-    m_bitboard[pawn]    = (uint64_t) 0x002d50081280e700;
-    m_bitboard[knight]  = (uint64_t) 0x0000221000040000;
-    m_bitboard[bishop]  = (uint64_t) 0x0040010000001800;
+    m_bitboard[white]   = (uint64_t) 0x000000000000ffff;
+    m_bitboard[black]   = (uint64_t) 0xffff000000000000;
+    m_bitboard[pawn]    = (uint64_t) 0x00ff00000000ff00;
+    m_bitboard[knight]  = (uint64_t) 0x4200000000000042;
+    m_bitboard[bishop]  = (uint64_t) 0x2400000000000024;
     m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
-    m_bitboard[queen]   = (uint64_t) 0x0010000000200000;
+    m_bitboard[queen]   = (uint64_t) 0x0800000000000008;
     m_bitboard[king]    = (uint64_t) 0x1000000000000010;
-    m_stateHist.reserve(20);
     m_stateHist.emplace_back(uint32_t(0x1e));
     setKingSquare(white, e1);
     setKingSquare(black, e8);
+}
+
+Board::Board(std::string t_FEN)
+{
+    std::vector<std::string> dataFields = split(t_FEN, ' ');
+    std::string boardField = dataFields[0];
+    std::string sideToMove = dataFields[1];
+    std::string castleRights = dataFields[2];
+    std::string epSquare = dataFields[3];
+    std::string halfmoveClock = dataFields.size() < 5 ? "0" : dataFields[4];
+
+    m_stateHist.emplace_back(uint32_t(0x0));
+
+    // Set bitboards to zero
+    for(int i = 0; i < 8; i ++) m_bitboard[i] = 0ULL;
+
+    // Setup bitboards:
+    std::vector<std::string> boardSquares = split(boardField, '/');
+    for (int rank = 0; rank < 8; rank++){
+        int stringIndex = 0;
+        for (int file = 0; file < 8; file ++){
+            char squareContent = boardSquares[7 - rank][stringIndex];
+            stringIndex +=1;
+            int squareNumber = (rank * 8) + file;
+            if (isdigit(squareContent)) file += squareContent - '1';
+            else switch (squareContent)
+            {
+            case 'p': m_bitboard[pawn]  |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
+            case 'P': m_bitboard[pawn]  |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
+            case 'n': m_bitboard[knight]|= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
+            case 'N': m_bitboard[knight]|= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
+            case 'b': m_bitboard[bishop]|= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
+            case 'B': m_bitboard[bishop]|= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
+            case 'r': m_bitboard[rook]  |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
+            case 'R': m_bitboard[rook]  |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
+            case 'q': m_bitboard[queen] |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
+            case 'Q': m_bitboard[queen] |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
+            case 'k': m_bitboard[king]  |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
+            case 'K': m_bitboard[king]  |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
+            }
+        }
+    }
+
+    setKingSquare(white, bitScanForward(m_bitboard[king] & m_bitboard[white]));
+    setKingSquare(black, bitScanForward(m_bitboard[king] & m_bitboard[black]));
+
+    // Set side to move
+    tolower(sideToMove[0]) == 'w' ? m_stateHist.back() &= ~0x1 : m_stateHist.back() |= 0x1;
+
+    // Set castling rights
+    for (char character : castleRights) switch (character)
+    {
+    case 'k': m_stateHist.back() |= uint32_t(1) << 2; break;
+    case 'q': m_stateHist.back() |= uint32_t(1) << 4; break;
+    case 'K': m_stateHist.back() |= uint32_t(1) << 1; break;
+    case 'Q': m_stateHist.back() |= uint32_t(1) << 3; break;
+    }
+
+
+    // Set ep square
+    if (epSquare.compare("-") != 0) m_stateHist.back() |= (1 << 5) | ((1 << atoi(epSquare.c_str())) << 6);
+
+    // Set HMC
+    m_stateHist.back() += atoi(halfmoveClock.c_str()) << 24;
 }
 
 void Board::makeMove(const Move &t_move)

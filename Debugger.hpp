@@ -9,7 +9,8 @@
 class Debugger
 {
 public:
-    Debugger() : m_lookup{LookupTables::getInstance()} {}
+    Debugger() : m_lookup{LookupTables::getInstance()}{}
+    Debugger(std::string t_FEN) : m_lookup{LookupTables::getInstance()}, m_board{t_FEN} {}
     uint64_t getPerft(int t_depth);
 private:
     bool isInCheck();

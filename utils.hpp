@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <vector>
 #include <cstdint>
+#include <string>
 
 // Bit TWiddling functions
 constexpr void wrapNort (uint64_t &bitBoard) {bitBoard <<= 8;}
@@ -20,3 +20,6 @@ static int _popCount256[256];
 static bool _isPopCountInit = false;
 void initPopCount256();
 int popCount(uint64_t bitBoard);
+
+std::vector<std::string> split (const std::string &string, char delim);
+bool is_number(const std::string& s);

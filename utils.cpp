@@ -2,6 +2,8 @@
 #include "notation.hpp"
 
 #include <cassert>
+#include <algorithm>
+#include <sstream>
 
 // Finds position of Least Significant 1 Bit
 int bitScanForward(uint64_t bitBoard){
@@ -65,4 +67,23 @@ int bitScanReverse(uint64_t bitBoard){
     bitBoard |= bitBoard >> 16;
     bitBoard |= bitBoard >> 32;
     return index64[(bitBoard * deBrujin64) >> 58];
+}
+
+
+std::vector<std::string> split (const std::string &s, char delim) {
+    std::vector<std::string> result;
+    std::stringstream ss (s);
+    std::string item;
+
+    while (getline (ss, item, delim)) {
+        result.push_back (item);
+    }
+
+    return result;
+}
+
+bool is_number(const std::string& s)
+{
+    return !s.empty() && std::find_if(s.begin(), 
+        s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end();
 }

@@ -8,6 +8,7 @@ class Board
 {
 public:
     Board();
+    Board(std::string t_FEN);
     
     inline uint64_t getBitboard(int t_piece) const {return m_bitboard[t_piece];}   
 
