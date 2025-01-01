@@ -23,6 +23,10 @@ int bitScanForward(uint64_t bitBoard){
     return index64[((bitBoard ^ (bitBoard-1)) * deBrujin64) >> 58];
 }
 
+
+static int _popCount256[256];
+static bool _isPopCountInit = false;
+
 void initPopCount256()
 {
     _popCount256[0] = 0;

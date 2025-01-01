@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <array>
 #include "Move.hpp"
 
 class Board
@@ -9,6 +10,10 @@ class Board
 public:
     Board();
     Board(std::string t_FEN);
+    Board(const Board&);
+    Board& operator= (const Board&);
+    bool operator==(const Board&) const;
+    bool operator!=(const Board&) const;
     
     inline uint64_t getBitboard(int t_piece) const {return m_bitboard[t_piece];}   
 
@@ -21,6 +26,7 @@ public:
     inline int  getEpSquare()   const {return (m_stateHist.back() >> 6) & 0x3f;}
     inline int  getHMC()        const {return (m_stateHist.back() >> 24) & 0x7f;} 
 
+    size_t getHash() const;
 
     void makeMove(const Move &t_move);
     void undoMove(const Move &t_move);
@@ -36,7 +42,7 @@ private:
     void updateBitboards(const Move &t_move);
 
 private:
-    uint64_t m_bitboard[8];
+    std::array<uint64_t, 8> m_bitboard;
     std::vector<uint32_t> m_stateHist;
     // first 1 bit for side to move
     // then  4 bits for castling rights

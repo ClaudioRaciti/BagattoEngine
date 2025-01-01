@@ -83,6 +83,39 @@ Board::Board(std::string t_FEN)
     m_stateHist.back() += atoi(halfmoveClock.c_str()) << 24;
 }
 
+Board::Board(const Board &t_other) : m_bitboard{t_other.m_bitboard}
+{
+    m_stateHist.emplace_back(t_other.m_stateHist.back());
+}
+
+Board &Board::operator=(const Board &t_other)
+{
+    if(this != &t_other){
+        m_bitboard = t_other.m_bitboard;
+        m_stateHist.emplace_back(t_other.m_stateHist.back());
+    }
+    return *this;
+}
+
+bool Board::operator==(const Board &t_other) const
+{
+    return (m_bitboard == t_other.m_bitboard) && (m_stateHist.back() == t_other.m_stateHist.back());
+}
+
+bool Board::operator!=(const Board &t_other) const
+{
+    return (m_bitboard != t_other.m_bitboard) || (m_stateHist.back() != t_other.m_stateHist.back());
+}
+
+uint64_t Board::getHash() const
+{
+    uint64_t key = 0ULL;
+    for(uint64_t bitboard : m_bitboard) key ^= hash64(bitboard);
+    key ^= uint64_t(hash32(m_stateHist.back())) << 32;
+
+    return key;
+}
+
 void Board::makeMove(const Move &t_move)
 {
     // ALWAYS removes en-passant and en-passant square
