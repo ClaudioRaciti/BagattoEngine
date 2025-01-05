@@ -1,23 +1,22 @@
-#include "Debugger.hpp"
+#include "Engine.hpp"
 #include <chrono>
 #include <iostream>
 #include <vector>
 #include <bitset>
-#include "HashTable.hpp"
 using namespace std::chrono;
 
 
 int main(){
-    Debugger debugger;
+    Engine engine;
 
-    // Get starting timepoint
+    // // Get starting timepoint
     auto start = high_resolution_clock::now();
 
-    std::cout << debugger.getPerft(6) << std::endl;
+    std::cout << engine.getEval("r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1", 11) << std::endl;
 
-    // Get ending timepoint
+    // // Get ending timepoint
     auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<milliseconds>(stop - start);
+    auto duration = duration_cast<seconds>(stop - start);
 
-    std::cout << "Time taken by function: "<< duration.count() << " milliseconds" << std::endl;
+    std::cout << "Time taken by function: "<< duration.count() << " seconds" << std::endl;
 }

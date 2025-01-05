@@ -8,7 +8,7 @@
 class Board
 {
 public:
-    Board();
+    Board() = default;
     Board(std::string t_FEN);
     Board(const Board&);
     Board& operator= (const Board&);

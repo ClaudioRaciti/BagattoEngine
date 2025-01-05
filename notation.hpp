@@ -1,6 +1,6 @@
 #pragma once
 
-const float CHECKMATE = 500.0f;
+#define CHECKMATE  (INT16_MIN / 2)
 
 enum pieceType {
     white, black, pawn, knight, bishop, rook, queen, king
@@ -29,5 +29,5 @@ enum moveType {
 };
 
 enum nodeType {
-    pvNode, allNode, cutNode, endNode
+    pvNode, cutNode, allNode
 };

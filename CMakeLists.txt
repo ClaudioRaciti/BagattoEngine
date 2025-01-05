@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5.0)
 project(engine VERSION 0.1.0 LANGUAGES C CXX)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wall -Wpedantic -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wall -Wpedantic -Wextra -O3")
 
 add_executable(
     engine 
@@ -21,6 +21,10 @@ add_executable(
     TTValue.hpp
     HashTable.hpp
     HashTable.cpp
+    evaluation.hpp
+    evaluation.cpp
+    Engine.hpp
+    Engine.cpp
 )
 
 include(CTest)

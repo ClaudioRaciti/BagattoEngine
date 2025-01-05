@@ -3,22 +3,6 @@
 #include <cassert>
 #include <bitset>
 
-
-Board::Board()
-{
-    m_bitboard[white]   = (uint64_t) 0x000000000000ffff;
-    m_bitboard[black]   = (uint64_t) 0xffff000000000000;
-    m_bitboard[pawn]    = (uint64_t) 0x00ff00000000ff00;
-    m_bitboard[knight]  = (uint64_t) 0x4200000000000042;
-    m_bitboard[bishop]  = (uint64_t) 0x2400000000000024;
-    m_bitboard[rook]    = (uint64_t) 0x8100000000000081;
-    m_bitboard[queen]   = (uint64_t) 0x0800000000000008;
-    m_bitboard[king]    = (uint64_t) 0x1000000000000010;
-    m_stateHist.emplace_back(uint32_t(0x1e));
-    setKingSquare(white, e1);
-    setKingSquare(black, e8);
-}
-
 Board::Board(std::string t_FEN)
 {
     std::vector<std::string> dataFields = split(t_FEN, ' ');

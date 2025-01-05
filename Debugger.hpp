@@ -10,7 +10,6 @@
 class Debugger
 {
 public:
-    Debugger() : m_lookup{LookupTables::getInstance()}, m_TTable{1<<22} {}
     Debugger(std::string t_FEN) : m_lookup{LookupTables::getInstance()}, m_board{t_FEN}, m_TTable{1<<22} {}
     uint64_t getPerft(int t_depth);
 private:

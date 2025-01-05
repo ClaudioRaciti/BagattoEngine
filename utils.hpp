@@ -16,12 +16,15 @@ constexpr uint64_t cpyWrapWest (uint64_t bitBoard) {wrapWest(bitBoard); return b
 int bitScanReverse (uint64_t bitBoard);
 int bitScanForward (uint64_t bitBoard);
 
+// Population count functions
 void initPopCount256();
 int popCount(uint64_t bitBoard);
 
+// String manipulation functions
 std::vector<std::string> split (const std::string &string, char delim);
 bool is_number(const std::string& s);
 
+// Hashing functions
 // MurmurHash3Mixer 
 constexpr uint64_t hash64(uint64_t key){key = ((key >> 33) ^ key) * 0xff51afd7ed558ccd; key = ((key >> 33) ^ key) * 0xc4ceb9fe1a85ec53; return key ^ (key >>33);}
 constexpr uint32_t hash32(uint32_t key){key = ((key >> 16) ^ key) * 0x45d9f3b; key = ((key >> 16) ^ key) * 0x45d9f3b; return key ^ (key >>16);}

@@ -1,6 +1,11 @@
 #include "Move.hpp"
 #include <map>
 
+Move::Move(const Move &t_ohter)
+{
+    m_move = t_ohter.m_move;
+}
+
 Move::Move(int t_from, int t_to, int t_flag, int t_piece)
 {
     m_move = ((t_piece & 0x0f) << 16 | (t_flag & 0x0f) << 12 | (t_from & 0x3f) << 6 | (t_to & 0x3f));
@@ -43,8 +48,7 @@ std::ostream &operator<<(std::ostream &os, const Move &cm)
     };
     
     std::map<int, std::string> pieces{
-        {0,"white"},{1,"black"},{2,"pawn"},{3,"knight"},{4,"bishop"},{5,"rook"},
-        {6,"queen"},{7,"king"}
+        {0,"white"},{1,"black"},{2,"pawn"},{3,"N"},{4,"B"},{5,"R"},{6,"Q"},{7,"K"}
     };
 
     std::map<int, std::string> flags{
@@ -55,8 +59,10 @@ std::ostream &operator<<(std::ostream &os, const Move &cm)
         to rook"},{15,"capture and promotion to queen"}
     };
 
-    os << pieces[cm.piece()] << " from " << squares[cm.startingSquare()] <<
-        " to " << squares[cm.endSquare()] << " flag " << flags[cm.flag()];
+    if(cm.piece() != pawn) os << pieces[cm.piece()];
+    else if (cm.isCapture()) os << squares[cm.startingSquare()][0];
+    os << (cm.isCapture() ? "x" : "");
+    os << squares[cm.endSquare()] << " flag " << flags[cm.flag()];
 
     return os;
 }

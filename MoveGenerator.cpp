@@ -40,6 +40,14 @@ void MoveGenerator::generateCaptures(const Board &t_board, std::vector<Move> &t_
     for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, t_moveList, t_board);  
 }
 
+std::vector<Move> MoveGenerator::evadeCheck(const Board &t_board)
+{
+    std::vector<Move> moveList;
+    moveList.reserve(256); // over the maximum number of moves possible for any legal position
+    evadeCheck(t_board, moveList);
+    return moveList;
+}
+
 void MoveGenerator::evadeCheck(const Board &t_board, std::vector<Move> &t_moveList)
 {
     generatePieceQuiets(king, t_moveList, t_board);

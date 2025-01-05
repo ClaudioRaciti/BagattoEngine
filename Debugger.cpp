@@ -9,8 +9,6 @@ uint64_t Debugger::getPerft(int t_depth)
 
     if (t_depth == 0) 
         return 1ULL;
-    if(m_TTable.contains(m_board) && m_TTable.getDepth(m_board) == t_depth)
-        return uint16_t(m_TTable.getScore(m_board));
     auto moveList = m_generator.generateMoves(m_board);
     for (auto move : moveList) {
         m_board.makeMove(move);
@@ -19,7 +17,6 @@ uint64_t Debugger::getPerft(int t_depth)
         }
         m_board.undoMove(move);
     }
-    if (nodes < (INT16_MAX - INT16_MIN)) m_TTable.insert(m_board, int16_t(nodes), t_depth, 0);
     return nodes;
 }
 
