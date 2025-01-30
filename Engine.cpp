@@ -8,24 +8,24 @@
 
 int16_t Engine::getEval(std::string t_position, int t_depth)
 {   
-    static constexpr int pieceVal[5] = {100, 300, 300, 500, 1000};
+    static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
     m_board = Board(t_position);
     m_materialCount = 0;
     for (int piece = pawn; piece < king; piece ++) 
-        m_materialCount += popCount(m_board.getBitboard(piece)) * pieceVal[piece - pawn];
+        m_materialCount += popCount(m_board.getBitboard(piece)) * pieceVal[piece];
     return iterativeDeepening(0, t_depth, INT16_MIN, INT16_MAX);
 }
 
 int16_t Engine::debugQuiescence(std::string t_position)
 {
     m_board = Board(t_position);
-    return quiescence(0, INT16_MAX);
+    return quiescence(INT16_MIN, INT16_MAX);
 }
 
 int16_t Engine::iterativeDeepening(int t_depth, int t_maxDepth, int16_t t_alpha, int16_t t_beta)
 {
     std::vector<Move> PV;
-    constexpr int16_t windowSize = 75;
+    constexpr int16_t windowSize = 25;
     std:: cout << "\nalpha = " << t_alpha << " beta = " << t_beta << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     int16_t result = alphaBeta(t_depth, t_alpha, t_beta, PV);
@@ -54,7 +54,7 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
 {
     if(t_depth == 0) return quiescence(t_alpha, t_beta);
 
-    static constexpr int pieceVal[5] = {100, 300, 300, 500, 1000};
+    static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
     int16_t bestScore = CHECKMATE, hashScore;
     int hashDepth, hashNodeType;
     Move hashMove;
@@ -72,9 +72,9 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
         if(!isIllegal()){
             int16_t score;
             if(hashMove.isCapture()){ 
-                m_materialCount -= pieceVal[hashMove.captured() - pawn];
+                m_materialCount -= pieceVal[hashMove.captured()];
                 score = -alphaBeta(t_depth - 1, -t_beta, -t_alpha, line);
-                m_materialCount += pieceVal[hashMove.captured() - pawn];
+                m_materialCount += pieceVal[hashMove.captured()];
             }
             else score = -alphaBeta(t_depth - 1, -t_beta, -t_alpha, line);
             if (score > bestScore) {
@@ -99,9 +99,9 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
     for (auto movePtr = captureList.begin(); t_alpha < t_beta && movePtr != captureList.end(); movePtr ++){
         m_board.makeMove(*movePtr);
         if(!isIllegal()){
-            m_materialCount -= pieceVal[movePtr->captured() - pawn];
+            m_materialCount -= pieceVal[movePtr->captured()];
             int16_t score = -alphaBeta(t_depth - 1, -t_beta, -t_alpha, line);
-            m_materialCount += pieceVal[movePtr->captured() - pawn];
+            m_materialCount += pieceVal[movePtr->captured()];
             if (score > bestScore) {
                 bestScore = score;
                 hashMove = *movePtr;
@@ -139,7 +139,7 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
 
     if (bestScore == CHECKMATE && !isCheck()) bestScore = 0;
     
-    if (bestScore >= t_beta)        m_TTable.insert(m_board, bestScore, t_depth, cutNode, hashMove);
+    if      (bestScore >= t_beta)   m_TTable.insert(m_board, bestScore, t_depth, cutNode, hashMove);
     else if (bestScore <= t_alpha)  m_TTable.insert(m_board, bestScore, t_depth, allNode, hashMove);
     else                            m_TTable.insert(m_board, bestScore, t_depth, pvNode , hashMove);
 
@@ -149,39 +149,58 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
 
 int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
 {
-    static constexpr int pieceVal[5] = {100, 300, 300, 500, 1000};
-    int16_t bestScore, standPat = evaluate(m_board, gamePhase());
-    std::vector<Move> moveList;
-    if (isCheck()){
-        bestScore = CHECKMATE;
-        moveList = m_generator.evadeCheck(m_board);
-    }
-    else{
-        bestScore = standPat;
-        if(m_board.getSideToMove() == black) bestScore *= -1;
+    if (isCheck()) return evadeChecks(t_alpha, t_beta);
 
-        if(bestScore >= t_beta) return bestScore;
-        if(bestScore + pieceVal[queen] < t_alpha) return t_alpha;
-        if(bestScore > t_alpha) t_alpha = bestScore;
+    static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
+    int16_t standPat = evaluate(m_board, gamePhase()) * (m_board.getSideToMove() == white ? 1 : -1);
+    int16_t bestScore = standPat;
 
-        moveList = m_generator.generateCaptures(m_board);
-        std::sort(moveList.begin(), moveList.end(), [](Move a, Move b){return a.asInt() > b.asInt();});
+    
+    if(bestScore > t_alpha) {t_alpha = bestScore; if(bestScore >= t_beta) return bestScore;}
+    else if(bestScore + pieceVal[queen] < t_alpha) return t_alpha;
+
+    std::vector<Move> moveList = m_generator.generateCaptures(m_board);
+    std::sort(moveList.begin(), moveList.end(), [](Move a, Move b){return a.asInt() > b.asInt();});
+
+    for (auto movePtr = moveList.begin(); t_alpha < t_beta && movePtr != moveList.end(); movePtr ++){
+        m_board.makeMove(*movePtr);
+        if(!isIllegal()){
+            int16_t score = CHECKMATE;         
+            if (standPat + pieceVal[movePtr->captured()] + 200 > t_alpha ){ 
+                m_materialCount -= pieceVal[movePtr->captured()];
+                score = -quiescence(-t_beta, -t_alpha);
+                m_materialCount += pieceVal[movePtr->captured()];
+
+                if (score > bestScore) {bestScore = score; if (score > t_alpha) t_alpha = score;}
+            }
+        }
+        m_board.undoMove(*movePtr);
     }
+
+    return bestScore;
+}
+
+int16_t Engine::evadeChecks(int16_t t_alpha, int16_t t_beta)
+{
+    static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
+    int16_t standPat = evaluate(m_board, gamePhase()) * (m_board.getSideToMove() == white ? 1 : -1);
+    int16_t bestScore = CHECKMATE;
+    std::vector<Move> moveList = m_generator.evadeCheck(m_board);
 
     for (auto movePtr = moveList.begin(); t_alpha < t_beta && movePtr != moveList.end(); movePtr ++){
         m_board.makeMove(*movePtr);
         if(!isIllegal()){
             int16_t score = CHECKMATE;
-            if(!movePtr->isCapture() && standPat + 200 > t_alpha) score = -quiescence(-t_beta, - t_alpha);            
-            else if (standPat + pieceVal[movePtr->captured() - pawn] + 200 > t_alpha ){ 
-                m_materialCount -= pieceVal[movePtr->captured() - pawn];
+            if(!movePtr->isCapture() && standPat + 200 > t_alpha){
+                score = -quiescence(-t_beta, - t_alpha);
+                if (score > bestScore) {bestScore = score; if (score > t_alpha) t_alpha = score;}
+            }            
+            else if (standPat + pieceVal[movePtr->captured()] + 200 > t_alpha ){ 
+                m_materialCount -= pieceVal[movePtr->captured()];
                 score = -quiescence(-t_beta, -t_alpha);
-                m_materialCount += pieceVal[movePtr->captured() - pawn];
-            }
-            
-            if (score > bestScore) {
-                bestScore = score;
-                if (score > t_alpha) t_alpha = score; 
+                m_materialCount += pieceVal[movePtr->captured()];
+
+                if (score > bestScore) {bestScore = score; if (score > t_alpha) t_alpha = score;}
             }
         }
         m_board.undoMove(*movePtr);

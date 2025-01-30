@@ -12,7 +12,7 @@ int main(){
     // // Get starting timepoint
     auto start = high_resolution_clock::now();
 
-    std::cout << engine.getEval("r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1", 11) << std::endl;
+    std::cout << engine.getEval("rn4k1/p1pp2pp/1p2pr2/7q/3P1Pp1/2PB3N/PP1N1PK1/R2QR3 b - - 0 15", 12) << std::endl;
 
     // // Get ending timepoint
     auto stop = high_resolution_clock::now();
