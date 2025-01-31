@@ -12,11 +12,11 @@ int main(){
     // // Get starting timepoint
     auto start = high_resolution_clock::now();
 
-    std::cout << engine.getEval("rn4k1/p1pp2pp/1p2pr2/7q/3P1Pp1/2PB3N/PP1N1PK1/R2QR3 b - - 0 15", 12) << std::endl;
+    engine.getEval("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 11);
 
     // // Get ending timepoint
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<seconds>(stop - start);
 
-    std::cout << "Time taken by function: "<< duration.count() << " seconds" << std::endl;
+    std::cout << "\nTime taken by function: "<< duration.count() << " seconds" << std::endl;
 }

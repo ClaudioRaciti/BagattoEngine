@@ -58,11 +58,14 @@ std::ostream &operator<<(std::ostream &os, const Move &cm)
         to knight"},{13,"capture and promotion to bishop"},{14,"capture and promotion\
         to rook"},{15,"capture and promotion to queen"}
     };
-
-    if(cm.piece() != pawn) os << pieces[cm.piece()];
-    else if (cm.isCapture()) os << squares[cm.startingSquare()][0];
-    os << (cm.isCapture() ? "x" : "");
-    os << squares[cm.endSquare()] << " flag " << flags[cm.flag()];
-
+    
+    if(cm.isCastle()) os << (cm.flag() == kingCastle ? "O-O" : "O-O-O");
+    else{
+        if(cm.piece() != pawn) os << pieces[cm.piece()];
+        else if (cm.isCapture()) os << squares[cm.startingSquare()][0];
+        os << (cm.isCapture() ? "x" : "");
+        os << squares[cm.endSquare()];
+        //os << " flag " << flags[cm.flag()];
+    }
     return os;
 }

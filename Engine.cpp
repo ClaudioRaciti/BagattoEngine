@@ -26,7 +26,7 @@ int16_t Engine::iterativeDeepening(int t_depth, int t_maxDepth, int16_t t_alpha,
 {
     std::vector<Move> PV;
     constexpr int16_t windowSize = 25;
-    std:: cout << "\nalpha = " << t_alpha << " beta = " << t_beta << std::endl;
+    std:: cout << "\n\nalpha = " << t_alpha << " beta = " << t_beta << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     int16_t result = alphaBeta(t_depth, t_alpha, t_beta, PV);
     std::cout << "At depth " << t_depth << " evaluation is: " << result << "\n";
@@ -42,9 +42,16 @@ int16_t Engine::iterativeDeepening(int t_depth, int t_maxDepth, int16_t t_alpha,
     }
     auto stop = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> fp_ms = stop - start;
-    std::cout << "Principal variation: ("<< fp_ms.count() <<" secondi)\n";
-    for (Move move : PV) std::cout << move << std::endl;
-
+    std::cout << "Principal variation: ";
+    std::cout << "1." << (m_board.getSideToMove() == white ? " " : ".. ");
+    int nMove = 1;
+    for (auto move = PV.crbegin(); move < PV.crend(); move ++){
+        nMove += 1;
+        if(m_board.getSideToMove() == white && nMove%2 == 0 && nMove > 2) std::cout << nMove/2 << ". ";
+        if(m_board.getSideToMove() == black && nMove%2 == 1) std::cout << nMove/2 + 1<< ". ";
+        std::cout << *move << " ";
+    }
+    std::cout << "\n("<< fp_ms.count() <<" secondi)\n";
     if (t_depth == t_maxDepth) return result;
 
     return iterativeDeepening(t_depth + 1, t_maxDepth, result - windowSize, result + windowSize);
