@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 
 #include "Board.hpp"
 #include "Move.hpp"
@@ -12,6 +13,7 @@ class Engine
 {
 private:
     HashTable m_TTable;
+    std::vector<std::array<Move, 2>> m_killers;
     const LookupTables &m_lookup;
     Board m_board;
     MoveGenerator m_generator;
@@ -24,7 +26,7 @@ public:
     int16_t debugQuiescence(std::string t_position);
 private:
     int16_t iterativeDeepening(int t_depth, int t_maxDepth, int16_t alpha, int16_t beta);
-    int16_t alphaBeta(int t_depth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV);
+    int16_t alphaBeta(int t_depth, int t_maxDepth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV);
     int16_t quiescence(int16_t t_alpha, int16_t t_beta);
     int16_t evadeChecks(int16_t t_alpha, int16_t t_beta);
     int gamePhase();

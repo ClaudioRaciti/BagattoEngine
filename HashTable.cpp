@@ -3,9 +3,7 @@
 void HashTable::insert(Board &t_key, const int16_t &t_score, const int &t_depth, const int &t_nodeType, const Move &t_hashMove)
 {
     int index = t_key.getHash() % m_size;
-    //if(t_nodeType == pvNode || t_depth >= m_table[index]->value.depth())
-        m_table[index] = Entry{t_key, TTValue(t_score & (~0x3), t_depth, t_nodeType), t_hashMove};
-        //left shifting score by 2 and then right shifting it back when retrived for a coarser grain 
+    m_table[index] = Entry{t_key, TTValue(t_score, t_depth, t_nodeType), t_hashMove};
 }
 
 int16_t HashTable::getScore(const Board &t_key) const
