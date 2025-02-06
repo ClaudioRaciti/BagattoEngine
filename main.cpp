@@ -12,7 +12,9 @@ int main(){
     // // Get starting timepoint
     auto start = high_resolution_clock::now();
 
-    engine.getEval("r1bq1rk1/ppp1npp1/3p1n1p/4p3/1bB1P3/3P1NNP/PPP2PP1/R1BQ1RK1 b - - 3 9", 11);
+    int eval = engine.getEval("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ", 11);
+
+    std::cout << "Mate in " << (- eval - CHECKMATE + 1) / 2  << std::endl;
 
     // // Get ending timepoint
     auto stop = high_resolution_clock::now();
