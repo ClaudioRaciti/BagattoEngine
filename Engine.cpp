@@ -117,7 +117,16 @@ int16_t Engine::alphaBeta(int t_depth, int t_maxDepth, int16_t t_alpha, int16_t 
         m_board.makeMove(move);
         if(!isIllegal()){
             m_materialCount += - pieceVal[move.captured()] + (move.isPromo() ? pieceVal[move.promoPiece()] : 0);
-            int16_t score = -alphaBeta(t_depth + 1, t_maxDepth, -t_beta, -t_alpha, line);
+            int16_t score;
+            if (bestNodeType == pvNode){
+                score = -alphaBeta(t_depth + 1, t_maxDepth, -t_alpha - 1, -t_alpha, line);
+                if (score > t_alpha && score < t_beta){
+                    score = -alphaBeta(t_depth + 1, t_maxDepth, -t_beta, -t_alpha, line);
+                }
+            }
+            else{
+                score = -alphaBeta(t_depth + 1, t_maxDepth, -t_beta, -t_alpha, line);
+            }
             m_materialCount += + pieceVal[move.captured()] - (move.isPromo() ? pieceVal[move.promoPiece()] : 0);
 
             if (score > bestScore) {
@@ -145,7 +154,16 @@ int16_t Engine::alphaBeta(int t_depth, int t_maxDepth, int16_t t_alpha, int16_t 
         m_board.makeMove(move);
         if(!isIllegal()){
             m_materialCount += (move.isPromo() ? pieceVal[move.promoPiece()] : 0);
-            int16_t score = -alphaBeta(t_depth + 1, t_maxDepth, -t_beta, -t_alpha, line);
+            int16_t score;
+            if (bestNodeType == pvNode){
+                score = -alphaBeta(t_depth + 1, t_maxDepth, -t_alpha - 1, -t_alpha, line);
+                if (score > t_alpha && score < t_beta){
+                    score = -alphaBeta(t_depth + 1, t_maxDepth, -t_beta, -t_alpha, line);
+                }
+            }
+            else{
+                score = -alphaBeta(t_depth + 1, t_maxDepth, -t_beta, -t_alpha, line);
+            }
             m_materialCount -= (move.isPromo() ? pieceVal[move.promoPiece()] : 0);
             
             if (score > bestScore) {
@@ -196,7 +214,7 @@ int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
 
     
     if(bestScore > t_alpha) {t_alpha = bestScore; if(t_alpha >= t_beta) return bestScore;}
-    else if(bestScore + pieceVal[queen] + 200 < t_alpha) return bestScore;
+    else if(bestScore + (promoThreat() ? 1800 : 1000) < t_alpha) return bestScore;
 
     std::vector<Move> moveList = m_generator.generateCaptures(m_board);
     std::sort(moveList.begin(), moveList.end(), [](Move a, Move b){return a.asInt() > b.asInt();});
@@ -288,4 +306,11 @@ bool Engine::isSqAttacked(int t_square, int t_attackingSide)
     } 
 
     return false;
+}
+
+bool Engine::promoThreat()
+{
+    static constexpr uint64_t seventhRank[2] = {uint64_t(0x00ff000000000000), uint64_t(0x000000000000ff00)};
+    int sideToMove = m_board.getSideToMove();
+    return m_board.getBitboard(pawn) & m_board.getBitboard(sideToMove) & seventhRank[sideToMove];
 }

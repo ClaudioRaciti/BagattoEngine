@@ -33,4 +33,5 @@ private:
     bool isIllegal(); // opponent side is in check but its not his turn
     bool isCheck();   // opponent side gives check and its your turn
     bool isSqAttacked(int t_square, int t_attackingSide);
+    bool promoThreat();
 };
