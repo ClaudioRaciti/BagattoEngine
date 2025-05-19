@@ -48,7 +48,7 @@ std::ostream &operator<<(std::ostream &os, const Move &cm)
     };
     
     std::map<int, std::string> pieces{
-        {0,"white"},{1,"black"},{2,"pawn"},{3,"N"},{4,"B"},{5,"R"},{6,"Q"},{7,"K"}
+        {0,"white"},{1,"black"},{2,"pawn"},{3,"n"},{4,"b"},{5,"r"},{6,"q"},{7,"k"}
     };
 
     std::map<int, std::string> flags{
@@ -58,14 +58,9 @@ std::ostream &operator<<(std::ostream &os, const Move &cm)
         to knight"},{13,"capture and promotion to bishop"},{14,"capture and promotion\
         to rook"},{15,"capture and promotion to queen"}
     };
-    
-    if(cm.isCastle()) os << (cm.flag() == kingCastle ? "O-O" : "O-O-O");
-    else{
-        if(cm.piece() != pawn) os << pieces[cm.piece()];
-        else if (cm.isCapture()) os << squares[cm.startingSquare()][0];
-        os << (cm.isCapture() ? "x" : "");
-        os << squares[cm.endSquare()];
-        //os << " flag " << flags[cm.flag()];
-    }
+
+    os << squares[cm.startingSquare()] << squares[cm.endSquare()];
+    if (cm.isPromo()) os << pieces[cm.promoPiece()];
+
     return os;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #define CHECKMATE  (INT16_MIN / 2)
+#define STARTPOS "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 enum pieceType {
     white, black, pawn, knight, bishop, rook, queen, king

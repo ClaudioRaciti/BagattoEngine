@@ -6,6 +6,76 @@
 #include <cassert>
 #include <chrono>
 
+void Engine::resizeTT(int sizeMB)
+{
+    stopSearch();
+    const std::lock_guard guard(m_engine_mutex);
+    std::cout << "TT resized to " << sizeMB << "MB" << std::endl;
+    m_TTable.resize(sizeMB);
+}
+
+void Engine::setPos(std::string t_position)
+{
+    stopSearch();
+    const std::lock_guard guard(m_engine_mutex);
+    m_board = Board(t_position);
+}
+
+void Engine::makeMove(std::string t_move)
+{
+    std::cout << "making move " << t_move << std::endl;
+}
+
+void Engine::goSearch(int t_depth)
+{
+    m_gosearch = true;
+    m_thread = std::thread(&Engine::mainSearch, this, t_depth);
+    if (m_thread.joinable()) m_thread.join();
+}
+
+void Engine::stopSearch()
+{
+    m_gosearch = false;
+    if (m_thread.joinable()) m_thread.join();
+}
+
+void Engine::mainSearch(int t_maxDepth)
+{
+    const std::lock_guard guard(m_engine_mutex);
+
+    static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
+    static constexpr int16_t windowSize = 50;
+
+    m_killers.clear();
+    m_materialCount = 0;
+    for (int piece = pawn; piece < king; piece ++) m_materialCount += popCount(m_board.getBitboard(piece)) * pieceVal[piece];
+
+    Move bestmove;
+
+    int alpha = CHECKMATE, beta = -CHECKMATE;
+
+    for(int depth = 0; depth <= t_maxDepth && m_gosearch; depth ++){
+        std::vector<Move> PV;
+        m_killers.reserve(depth);        
+
+        int16_t eval = alphaBetaManager(0, depth, alpha, beta, PV);
+        int lowFails = 0, highFails = 0;
+        while (eval <= alpha || eval >= beta) {
+            if (eval <= alpha) alpha -= windowSize * (1 << ++lowFails);
+            if (eval >= beta ) beta  += windowSize * (1 << ++highFails);
+            eval = alphaBetaManager(0, depth, alpha, beta, PV);
+        }
+
+        alpha = eval - windowSize;
+        beta = eval + windowSize;
+
+        if(PV.size() && m_gosearch) bestmove = PV.back();
+    }
+    
+    m_gosearch = false;
+    std::cout << "bestmove " << bestmove << std::endl;
+}
+
 int16_t Engine::getEval(std::string t_position, int t_depth)
 {   
     static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
@@ -21,6 +91,43 @@ int16_t Engine::debugQuiescence(std::string t_position)
 {
     m_board = Board(t_position);
     return quiescence(INT16_MIN, INT16_MAX);
+}
+
+int16_t Engine::alphaBetaManager(int t_depth, int t_maxDepth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV)
+{
+    auto start = std::chrono::high_resolution_clock::now(); 
+
+
+    m_searchedNodes = 0;
+    int16_t eval = alphaBeta(t_depth, t_maxDepth, alpha, beta, t_PV);
+
+    auto end = std::chrono::high_resolution_clock::now(); 
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    
+    double elapsedSec = elapsed / 1000.0;
+    uint64_t nps = (elapsedSec > 0) ? static_cast<uint64_t>(m_searchedNodes / elapsedSec) : 0;
+    
+    if(m_gosearch){
+        std::cout << "info "
+            << "depth " << t_maxDepth << " "
+            << "nodes " << m_searchedNodes << " "
+            << "time " << elapsed << " "
+            << "nps " << nps << " ";
+        if(eval - CHECKMATE <= t_maxDepth) std::cout << "mate " << (eval - CHECKMATE) / 2 + 1 << " ";
+        else if(- eval - CHECKMATE <= t_maxDepth) std::cout << "mate -" << (- eval - CHECKMATE) / 2 + 1 << " ";
+        else std::cout << "score cp " << eval << " ";
+        if (eval <= alpha) std::cout << "upperbound ";
+        if (eval >= beta) std::cout << "lowerbound ";
+        
+        if (t_PV.size()){
+            std::cout << "pv ";
+            for (auto move = t_PV.crbegin(); move != t_PV.crend(); move ++) std::cout << *move << " ";
+        }
+
+        std::cout << std::endl;
+    }
+    
+    return eval;
 }
 
 int16_t Engine::iterativeDeepening(int t_depth, int t_maxDepth, int16_t t_alpha, int16_t t_beta)
@@ -61,7 +168,9 @@ int16_t Engine::iterativeDeepening(int t_depth, int t_maxDepth, int16_t t_alpha,
 int16_t Engine::alphaBeta(int t_depth, int t_maxDepth, int16_t t_alpha, int16_t t_beta, std::vector<Move> &t_PV)
 {
     // Quiescence search at leafs
-    if(t_depth == t_maxDepth) return quiescence(t_alpha, t_beta);
+    if(t_depth == t_maxDepth || m_gosearch == false) return quiescence(t_alpha, t_beta);
+
+    m_searchedNodes += 1;
 
     static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
     int16_t  hashScore, bestScore = CHECKMATE + t_depth;
@@ -80,7 +189,7 @@ int16_t Engine::alphaBeta(int t_depth, int t_maxDepth, int16_t t_alpha, int16_t 
         if(hashScore == CHECKMATE) hashScore += t_depth;
 
         if(hashDepth >= (t_maxDepth - t_depth)) switch (hashNodeType){
-            case pvNode:  return hashScore; break;
+            case pvNode:  t_PV = line; t_PV.emplace_back(hashMove); return hashScore; break;
             case allNode: if(hashScore <= t_alpha) return hashScore; break;
             case cutNode: if(hashScore >= t_beta ) return hashScore; break;
         }
@@ -206,7 +315,10 @@ int16_t Engine::alphaBeta(int t_depth, int t_maxDepth, int16_t t_alpha, int16_t 
 
 int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
 {
+    if (m_gosearch == false) return 0;
     if (isCheck()) return evadeChecks(t_alpha, t_beta);
+    
+    m_searchedNodes += 1;
 
     static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
     int16_t standPat = evaluate(m_board, gamePhase()) * (m_board.getSideToMove() == white ? 1 : -1);
@@ -240,6 +352,10 @@ int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
 
 int16_t Engine::evadeChecks(int16_t t_alpha, int16_t t_beta)
 {
+    if(m_gosearch == false) return 0;
+
+    m_searchedNodes += 1;
+
     static constexpr int pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
     int16_t standPat = evaluate(m_board, gamePhase()) * (m_board.getSideToMove() == white ? 1 : -1);
     int16_t bestScore = CHECKMATE;
@@ -283,29 +399,14 @@ bool Engine::isIllegal()
 {
     int sideToMove = m_board.getSideToMove();
     int kingSquare = m_board.getKingSquare(1 - sideToMove);
-    return isSqAttacked(kingSquare, sideToMove);
+    return m_generator.isSquareAttacked(m_board, kingSquare, sideToMove);
 }
 
 bool Engine::isCheck()
 {
     int sideToMove = m_board.getSideToMove();
     int kingSquare = m_board.getKingSquare(sideToMove);
-    return isSqAttacked(kingSquare, 1 - sideToMove);
-}
-
-bool Engine::isSqAttacked(int t_square, int t_attackingSide)
-{    
-    uint64_t occupied = m_board.getBitboard(white) | m_board.getBitboard(black);
-    uint64_t pawnsSet = m_board.getBitboard(pawn) & m_board.getBitboard(t_attackingSide);
-    if ((m_lookup.pawnAttacks(t_square, 1-t_attackingSide) & pawnsSet) != 0) return true;
-
-
-    for (int piece = knight; piece <= king; piece ++){
-        uint64_t pieceSet = m_board.getBitboard(piece) & m_board.getBitboard(t_attackingSide);
-        if((m_lookup.getAttacks(piece, t_square, occupied) & pieceSet) != 0) return true;
-    } 
-
-    return false;
+    return m_generator.isSquareAttacked(m_board, kingSquare, 1 - sideToMove);
 }
 
 bool Engine::promoThreat()

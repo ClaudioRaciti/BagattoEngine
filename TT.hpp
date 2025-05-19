@@ -6,25 +6,25 @@
 #include "TTValue.hpp"
 #include "Move.hpp"
 
-#include <optional>
-
-class HashTable {
+class TT {
 private:
     struct Entry {
-        Board key;
+        uint64_t key;
         TTValue value;
         Move hashMove;
     };
 
-    int m_size;                             // Fixed size of the hash table
-    std::vector<std::optional<Entry>> m_table; // Fixed-size vector of optional entries
+    size_t m_tableSize;                             // Fixed size of the hash table
+    Entry* m_table; // Fixed-size vector of optional entries
 
 public:
     // Constructor
-    explicit HashTable(int tableSize) : m_size(tableSize), m_table(tableSize) {}
+    explicit TT(int sizeMB);
+    ~TT();
 
     // Insert a key-value pair (overwriting on collision)
     void insert(Board &t_key, const int16_t&t_score, const int &t_depth, const int &t_nodeType, const Move &t_hashMove);
+    void resize(int sizeMB);
 
     // Retrieve a value by key
     int16_t getScore(const Board& t_key) const;

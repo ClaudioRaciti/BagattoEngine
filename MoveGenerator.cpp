@@ -2,7 +2,7 @@
 #include "utils.hpp"
 #include <iostream>
 
-std::vector<Move> MoveGenerator::generateMoves(const Board &t_board)
+std::vector<Move> MoveGenerator::generateMoves(const Board &t_board) const
 {
     std::vector<Move> moveList;
     moveList.reserve(256); // over the maximum number of moves possible for any legal position
@@ -11,7 +11,7 @@ std::vector<Move> MoveGenerator::generateMoves(const Board &t_board)
     return moveList;
 }
 
-std::vector<Move> MoveGenerator::generateQuiets(const Board &t_board)
+std::vector<Move> MoveGenerator::generateQuiets(const Board &t_board) const
 {
     std::vector<Move> moveList;
     moveList.reserve(256); // over the maximum number of moves possible for any legal position
@@ -19,14 +19,14 @@ std::vector<Move> MoveGenerator::generateQuiets(const Board &t_board)
     return moveList;
 }
 
-void MoveGenerator::generateQuiets(const Board &t_board, std::vector<Move> &t_moveList)
+void MoveGenerator::generateQuiets(const Board &t_board, std::vector<Move> &t_moveList) const
 {
     generatePawnsQuiets(t_moveList, t_board);
     generateCatstle(t_moveList, t_board);
     for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceQuiets(pieceType, t_moveList, t_board);
 }
 
-std::vector<Move> MoveGenerator::generateCaptures(const Board &t_board)
+std::vector<Move> MoveGenerator::generateCaptures(const Board &t_board) const
 {    
     std::vector<Move> moveList;
     moveList.reserve(256); // over the maximum number of moves possible for any legal position
@@ -34,13 +34,13 @@ std::vector<Move> MoveGenerator::generateCaptures(const Board &t_board)
     return moveList;
 }
 
-void MoveGenerator::generateCaptures(const Board &t_board, std::vector<Move> &t_moveList)
+void MoveGenerator::generateCaptures(const Board &t_board, std::vector<Move> &t_moveList) const
 {
     generatePawnsCaptures(t_moveList, t_board);
     for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, t_moveList, t_board);  
 }
 
-std::vector<Move> MoveGenerator::evadeCheck(const Board &t_board)
+std::vector<Move> MoveGenerator::evadeCheck(const Board &t_board) const
 {
     std::vector<Move> moveList;
     moveList.reserve(256); // over the maximum number of moves possible for any legal position
@@ -48,7 +48,7 @@ std::vector<Move> MoveGenerator::evadeCheck(const Board &t_board)
     return moveList;
 }
 
-void MoveGenerator::evadeCheck(const Board &t_board, std::vector<Move> &t_moveList)
+void MoveGenerator::evadeCheck(const Board &t_board, std::vector<Move> &t_moveList) const
 {
     generatePieceQuiets(king, t_moveList, t_board);
     
@@ -105,7 +105,7 @@ void MoveGenerator::evadeCheck(const Board &t_board, std::vector<Move> &t_moveLi
     }
 }
 
-void MoveGenerator::generatePieceQuiets(int t_piece, std::vector<Move> &t_moveList, const Board &t_board)
+void MoveGenerator::generatePieceQuiets(int t_piece, std::vector<Move> &t_moveList, const Board &t_board) const
 {
     uint64_t pieceSet = t_board.getBitboard(t_piece) & t_board.getBitboard(t_board.getSideToMove());
     uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
@@ -123,7 +123,7 @@ void MoveGenerator::generatePieceQuiets(int t_piece, std::vector<Move> &t_moveLi
     } while (pieceSet &= (pieceSet - 1));
 }
 
-void MoveGenerator::generatePawnsQuiets(std::vector<Move> &t_moveList, const Board &t_board)
+void MoveGenerator::generatePawnsQuiets(std::vector<Move> &t_moveList, const Board &t_board) const
 {
     uint64_t emptySet = ~(t_board.getBitboard(white) | t_board.getBitboard(black));
     uint64_t pawnSet, doublePushSet, pushSet, promoSet;
@@ -172,7 +172,7 @@ void MoveGenerator::generatePawnsQuiets(std::vector<Move> &t_moveList, const Boa
     } while (doublePushSet  &= (doublePushSet - 1));
 }
 
-void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &t_board)
+void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &t_board) const
 {
     uint64_t emptySet = ~(t_board.getBitboard(black) | t_board.getBitboard(white));
 
@@ -220,7 +220,7 @@ void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &
     }
 }
 
-void MoveGenerator::generatePieceCaptures(int t_piece, std::vector<Move> &t_moveList, const Board &t_board)
+void MoveGenerator::generatePieceCaptures(int t_piece, std::vector<Move> &t_moveList, const Board &t_board) const
 {
     int sideToMove = t_board.getSideToMove();
     uint64_t pieceSet = t_board.getBitboard(t_piece) & t_board.getBitboard(sideToMove);
@@ -245,7 +245,7 @@ void MoveGenerator::generatePieceCaptures(int t_piece, std::vector<Move> &t_move
     } while (pieceSet &= (pieceSet - 1));
 }
 
-void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const Board &t_board)
+void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const Board &t_board) const
 {
     int sideToMove = t_board.getSideToMove();
     uint64_t pawnSet = t_board.getBitboard(pawn) & t_board.getBitboard(sideToMove);
@@ -342,7 +342,7 @@ void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const B
     } while (westPromoCaptures &= (westPromoCaptures - 1));
 }
 
-void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vector<Move> &t_moveList, const Board &t_board)
+void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vector<Move> &t_moveList, const Board &t_board) const
 {
     uint64_t attackerMask = uint64_t(1) << t_attackerSq;
     int sideToMove = t_board.getSideToMove();
@@ -414,7 +414,7 @@ void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vecto
     }
 }
 
-void MoveGenerator::blockAttacker(uint64_t t_blockableSquares, std::vector<Move> &t_moveList, const Board &t_board)
+void MoveGenerator::blockAttacker(uint64_t t_blockableSquares, std::vector<Move> &t_moveList, const Board &t_board) const
 {
     
     uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
@@ -480,14 +480,14 @@ void MoveGenerator::blockAttacker(uint64_t t_blockableSquares, std::vector<Move>
     }
 }
 
-bool MoveGenerator::isCheck(const Board &t_board)
+bool MoveGenerator::isCheck(const Board &t_board) const
 {
     int sideToMove = t_board.getSideToMove();
     int kingSquare = t_board.getKingSquare(sideToMove);
     return isSquareAttacked(t_board, kingSquare, 1 - sideToMove);
 }
 
-bool MoveGenerator::isSquareAttacked(const Board &t_board, int t_square, int t_attackingSide)
+bool MoveGenerator::isSquareAttacked(const Board &t_board, int t_square, int t_attackingSide) const
 {
     uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
     uint64_t pawnsSet = t_board.getBitboard(pawn) & t_board.getBitboard(t_attackingSide);
@@ -502,7 +502,7 @@ bool MoveGenerator::isSquareAttacked(const Board &t_board, int t_square, int t_a
     return false;
 }
 
-uint64_t MoveGenerator::getAttacksTo(const Board &t_board, int t_square, int t_attackingSide)
+uint64_t MoveGenerator::getAttacksTo(const Board &t_board, int t_square, int t_attackingSide) const
 {
     uint64_t occupied = t_board.getBitboard(white) | t_board.getBitboard(black);
     uint64_t enemyPawns = t_board.getBitboard(pawn) & t_board.getBitboard(t_attackingSide);
