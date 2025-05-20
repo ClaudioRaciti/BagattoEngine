@@ -24,18 +24,10 @@ void Move::operator=(Move otherObj)
     m_move = otherObj.m_move;
 }
 
-bool operator==(const Move &thisObj, const Move &otherObj)
+std::string Move::asString() const
 {
-    return thisObj.m_move == otherObj.m_move;
-}
+    std::string output;
 
-bool operator!=(const Move &thisObj, const Move &otherObj)
-{
-    return thisObj.m_move != otherObj.m_move;
-}
-
-std::ostream &operator<<(std::ostream &os, const Move &cm)
-{
     std::map<int, std::string> squares{
         { 0,"a1"},{ 1,"b1"},{ 2,"c1"},{ 3,"d1"},{ 4,"e1"},{ 5,"f1"},{ 6,"g1"},{ 7,"h1"},
         { 8,"a2"},{ 9,"b2"},{10,"c2"},{11,"d2"},{12,"e2"},{13,"f2"},{14,"g2"},{15,"h2"},
@@ -59,8 +51,27 @@ std::ostream &operator<<(std::ostream &os, const Move &cm)
         to rook"},{15,"capture and promotion to queen"}
     };
 
-    os << squares[cm.startingSquare()] << squares[cm.endSquare()];
-    if (cm.isPromo()) os << pieces[cm.promoPiece()];
+    output += squares[startingSquare()];
+    output += squares[endSquare()];
+    if (isPromo()) output += pieces[promoPiece()];
+
+    return output;
+}
+
+bool operator==(const Move &thisObj, const Move &otherObj)
+{
+    return thisObj.m_move == otherObj.m_move;
+}
+
+bool operator!=(const Move &thisObj, const Move &otherObj)
+{
+    return thisObj.m_move != otherObj.m_move;
+}
+
+std::ostream &operator<<(std::ostream &os, const Move &cm)
+{
+    std::string output = cm.asString();
+    if (output != "a1a1") os << output;
 
     return os;
 }

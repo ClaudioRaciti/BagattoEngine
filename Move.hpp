@@ -17,6 +17,8 @@ public:
     friend bool operator!= (const Move& thisObj, const Move& otherObj);
     friend std::ostream& operator<< (std::ostream& os, const Move& cm);
 
+    std::string asString() const;
+
     inline int endSquare()  const {return m_move & 0x3f;}
     inline int startingSquare() const {return (m_move >> 6) & 0x3f;}
     inline int flag()       const {return (m_move >> 12) & 0x0f;}

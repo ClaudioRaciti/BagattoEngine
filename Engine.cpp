@@ -5,12 +5,12 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <stdexcept>
 
 void Engine::resizeTT(int sizeMB)
 {
     stopSearch();
     const std::lock_guard guard(m_engine_mutex);
-    std::cout << "TT resized to " << sizeMB << "MB" << std::endl;
     m_TTable.resize(sizeMB);
 }
 
@@ -23,14 +23,21 @@ void Engine::setPos(std::string t_position)
 
 void Engine::makeMove(std::string t_move)
 {
-    std::cout << "making move " << t_move << std::endl;
+    stopSearch();
+    const std::lock_guard guard(m_engine_mutex);
+    std::vector<Move> moveList = m_generator.generateMoves(m_board);
+    for (auto move : moveList) if (t_move == move.asString()){
+        m_board.makeMove(move);
+        return;
+    }
+    throw std::invalid_argument("invalid move");
 }
 
 void Engine::goSearch(int t_depth)
 {
+    stopSearch();
     m_gosearch = true;
     m_thread = std::thread(&Engine::mainSearch, this, t_depth);
-    if (m_thread.joinable()) m_thread.join();
 }
 
 void Engine::stopSearch()

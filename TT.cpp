@@ -23,7 +23,6 @@ void TT::resize(int sizeMB)
     m_tableSize = sizeMB * 1024 * 1024 / sizeof(Entry);
     delete[] m_table;
     m_table = new Entry[m_tableSize];
-    std::cout << "Number of elements is " << m_tableSize << std::endl;
 }
 
 int16_t TT::getScore(const Board &t_key) const
