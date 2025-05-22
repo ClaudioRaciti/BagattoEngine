@@ -71,7 +71,7 @@ bool operator!=(const Move &thisObj, const Move &otherObj)
 std::ostream &operator<<(std::ostream &os, const Move &cm)
 {
     std::string output = cm.asString();
-    if (output != "a1a1") os << output;
+    os << output;
 
     return os;
 }

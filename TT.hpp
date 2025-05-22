@@ -28,6 +28,8 @@ public:
 
     // Retrieve a value by key
     int16_t getScore(const Board& t_key) const;
+    
+    Move getMove(const Board& t_key) const;
 
     int getDepth(const Board& t_key) const;
 

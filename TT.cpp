@@ -31,6 +31,12 @@ int16_t TT::getScore(const Board &t_key) const
     return (m_table[index].value.score());
 }
 
+Move TT::getMove(const Board &t_key) const
+{
+    size_t index = t_key.getHash() % m_tableSize;
+    return m_table[index].hashMove;
+}
+
 int TT::getDepth(const Board &t_key) const
 {
     size_t index = t_key.getHash() % m_tableSize;

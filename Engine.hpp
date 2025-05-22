@@ -15,7 +15,7 @@
 class Engine
 {
 private:
-    TT m_TTable;
+    TT m_TT;
     std::vector<std::array<Move, 2>> m_killers;
     Board m_board;
     int m_materialCount;
@@ -27,7 +27,7 @@ private:
     std::thread m_thread;
     std::mutex m_engine_mutex;
 public:
-    Engine(): m_TTable{128}, m_board{Board(STARTPOS)} {}
+    Engine(): m_TT{128}, m_board{Board(STARTPOS)} {}
     ~Engine() {stopSearch();}
     void resizeTT(int sizeMB);
     void setPos(std::string t_position);
@@ -36,16 +36,15 @@ public:
     void stopSearch();
 
     void mainSearch(int t_depth);
-    int16_t getEval(std::string t_position, int t_depth);
-    int16_t debugQuiescence(std::string t_position);
+    
 private:
-    int16_t alphaBetaManager(int t_depth, int t_maxDepth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV);
-    int16_t iterativeDeepening(int t_depth, int t_maxDepth, int16_t alpha, int16_t beta);
-    int16_t alphaBeta(int t_depth, int t_maxDepth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV);
+    void printSearchInfo(int t_maxDepth, int64_t t_elapsedTime, int16_t eval, std::vector<Move> &t_PV);
+    int16_t alphaBeta(int t_depth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV);
     int16_t quiescence(int16_t t_alpha, int16_t t_beta);
-    int16_t evadeChecks(int16_t t_alpha, int16_t t_beta);
     int gamePhase();
     bool isIllegal(); // opponent side is in check but its not his turn
     bool isCheck();   // opponent side gives check and its your turn
     bool promoThreat();
+    bool hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta);
+    std::vector<Move> orderMoves(int t_depth);
 };
