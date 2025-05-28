@@ -1,21 +1,14 @@
 #include "MoveGenerator.hpp"
 #include "utils.hpp"
 #include <iostream>
+#include <algorithm>
 
 std::vector<Move> MoveGenerator::generateMoves(const Board &t_board) const
 {
     std::vector<Move> moveList;
-    moveList.reserve(256); // over the maximum number of moves possible for any legal position
+    moveList.reserve(256);
     generateQuiets(t_board, moveList);
     generateCaptures(t_board, moveList);
-    return moveList;
-}
-
-std::vector<Move> MoveGenerator::generateQuiets(const Board &t_board) const
-{
-    std::vector<Move> moveList;
-    moveList.reserve(256); // over the maximum number of moves possible for any legal position
-    generateQuiets(t_board, moveList);
     return moveList;
 }
 
@@ -26,18 +19,12 @@ void MoveGenerator::generateQuiets(const Board &t_board, std::vector<Move> &t_mo
     for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceQuiets(pieceType, t_moveList, t_board);
 }
 
-std::vector<Move> MoveGenerator::generateCaptures(const Board &t_board) const
-{    
-    std::vector<Move> moveList;
-    moveList.reserve(256); // over the maximum number of moves possible for any legal position
-    generateCaptures(t_board, moveList);
-    return moveList;
-}
 
 void MoveGenerator::generateCaptures(const Board &t_board, std::vector<Move> &t_moveList) const
-{
+{    
     generatePawnsCaptures(t_moveList, t_board);
-    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, t_moveList, t_board);  
+    for (int pieceType = knight; pieceType <= king; pieceType ++) generatePieceCaptures(pieceType, t_moveList, t_board);
+    if (t_board.getEpState()) generateEnPassants(t_moveList, t_board);
 }
 
 std::vector<Move> MoveGenerator::evadeCheck(const Board &t_board) const
@@ -61,7 +48,7 @@ void MoveGenerator::evadeCheck(const Board &t_board, std::vector<Move> &t_moveLi
         for (checkingPiece = pawn; checkingPiece < king; checkingPiece ++)
             if (t_board.getBitboard(checkingPiece) & checkers) break;
         
-        captureAttacker(checkingPiece, checkingSquare, t_moveList, t_board);
+        captureAttacker(checkingSquare, t_moveList, t_board);
         //find out wich piece is the attacker
         //if attacker is sliding piece: block
         if (checkingPiece == bishop || checkingPiece == queen){
@@ -118,7 +105,7 @@ void MoveGenerator::generatePieceQuiets(int t_piece, std::vector<Move> &t_moveLi
         uint64_t quietMoves = attackSet & emptySet;
         if (quietMoves) do {
             int endSquare = bitScanForward(quietMoves);
-            t_moveList.emplace_back(Move(startingSquare, endSquare, quiet, t_piece));
+            t_moveList.emplace_back(Move(startingSquare, endSquare, quiet));
         } while (quietMoves &= (quietMoves - 1));
     } while (pieceSet &= (pieceSet - 1));
 }
@@ -153,22 +140,22 @@ void MoveGenerator::generatePawnsQuiets(std::vector<Move> &t_moveList, const Boa
     if (pushSet) do {
         int endSq = bitScanForward(pushSet);
         int startSq = endSq + offset;
-        t_moveList.emplace_back(Move(startSq, endSq, quiet, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, quiet));
     } while (pushSet &= (pushSet - 1));
 
     if (promoSet) do {
         int endSq = bitScanForward(promoSet);
         int startSq = endSq + offset;
-        t_moveList.emplace_back(Move(startSq, endSq, knightPromo, pawn));
-        t_moveList.emplace_back(Move(startSq, endSq, bishopPromo, pawn));
-        t_moveList.emplace_back(Move(startSq, endSq, rookPromo, pawn));
-        t_moveList.emplace_back(Move(startSq, endSq, queenPromo, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, knightPromo));
+        t_moveList.emplace_back(Move(startSq, endSq, bishopPromo));
+        t_moveList.emplace_back(Move(startSq, endSq, rookPromo));
+        t_moveList.emplace_back(Move(startSq, endSq, queenPromo));
     } while (promoSet &= (promoSet - 1));
 
     if (doublePushSet) do {
         int endSq = bitScanForward(doublePushSet);
         int startSq = endSq + (2 * offset);
-        t_moveList.emplace_back(Move(startSq, endSq, doublePush, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, doublePush));
     } while (doublePushSet  &= (doublePushSet - 1));
 }
 
@@ -186,7 +173,7 @@ void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &
             ! isSquareAttacked(t_board, c1, black) &&
             ! isSquareAttacked(t_board, d1, black) &&
             ! isSquareAttacked(t_board, e1, black)
-        ) t_moveList.emplace_back(Move(e1, c1, queenCastle, king));
+        ) t_moveList.emplace_back(Move(e1, c1, queenCastle));
         
         intersection = shortCastleSquares & emptySet; 
         if(
@@ -195,7 +182,7 @@ void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &
             ! isSquareAttacked(t_board, e1, black) &&
             ! isSquareAttacked(t_board, f1, black) &&
             ! isSquareAttacked(t_board, g1, black)
-        ) t_moveList.emplace_back(Move(e1, g1, kingCastle, king));
+        ) t_moveList.emplace_back(Move(e1, g1, kingCastle));
     }
     else{
         static constexpr uint64_t longCastleSquares = (uint64_t) 0x0e00000000000000;
@@ -207,7 +194,7 @@ void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &
             ! isSquareAttacked(t_board, c8, white) &&
             ! isSquareAttacked(t_board, d8, white) &&
             ! isSquareAttacked(t_board, e8, white)
-        ) t_moveList.emplace_back(Move(e8, c8, queenCastle, king));
+        ) t_moveList.emplace_back(Move(e8, c8, queenCastle));
 
         intersection = shortCastleSquares & emptySet;
         if(
@@ -216,7 +203,7 @@ void MoveGenerator::generateCatstle(std::vector<Move> &t_moveList, const Board &
             ! isSquareAttacked(t_board, e8, white) &&
             ! isSquareAttacked(t_board, f8, white) &&
             ! isSquareAttacked(t_board, g8, white)
-        ) t_moveList.emplace_back(Move(e8, g8, kingCastle, king));
+        ) t_moveList.emplace_back(Move(e8, g8, kingCastle));
     }
 }
 
@@ -230,17 +217,10 @@ void MoveGenerator::generatePieceCaptures(int t_piece, std::vector<Move> &t_move
     if (pieceSet) do {
         int startingSquare = bitScanForward(pieceSet);
         uint64_t attackSet = m_lookup.getAttacks(t_piece, startingSquare, occupied);
-
-        //serialize all captures moves
         uint64_t captures = attackSet & enemyPieces;
         if (captures) do {
             int endSquare = bitScanForward(captures);
-            uint64_t captureMask = uint64_t(1) << endSquare;
-            for (int captured  = pawn; captured < king; captured ++) 
-                if (captureMask & t_board.getBitboard(captured)) {
-                    t_moveList.emplace_back(Move(startingSquare, endSquare, capture, t_piece, captured));
-                    break;
-                }
+            t_moveList.emplace_back(Move(startingSquare, endSquare, capture));
         } while (captures &= (captures - 1));
     } while (pieceSet &= (pieceSet - 1));
 }
@@ -261,14 +241,6 @@ void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const B
         westPromoCaptures = (cpyWrapWest(pawnSet) << 8 & enemyPieces) & row8;
         eastOffset = -9;
         westOffset = -7;
-
-        if(t_board.getEpState() == true){
-            int epSquare = t_board.getEpSquare();
-            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) 
-                t_moveList.emplace_back(Move(epSquare + 1, epSquare + 8, enPassant, pawn, pawn));
-            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) 
-                t_moveList.emplace_back(Move(epSquare - 1, epSquare + 8, enPassant, pawn, pawn));
-        }
     }
     else {
         static constexpr uint64_t row1 = uint64_t(0x00000000000000ff);
@@ -278,71 +250,63 @@ void MoveGenerator::generatePawnsCaptures(std::vector<Move> &t_moveList, const B
         westPromoCaptures = (cpyWrapWest(pawnSet) >> 8 & enemyPieces) & row1;
         eastOffset = 7;
         westOffset = 9;
-
-
-        if(t_board.getEpState() == true){
-            int epSquare = t_board.getEpSquare();
-            if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) 
-                t_moveList.emplace_back(Move(epSquare + 1, epSquare - 8, enPassant, pawn, pawn));
-            if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) 
-                t_moveList.emplace_back(Move(epSquare - 1, epSquare - 8, enPassant, pawn, pawn));
-        }
     }
 
     if (westCaptures) do {
         int endSq = bitScanForward(westCaptures);
-        uint64_t captureMask = uint64_t(1) << endSq;
         int startSq = endSq + westOffset;
-        for (int captured  = pawn; captured < king; captured ++) 
-            if (captureMask & t_board.getBitboard(captured)) {
-                t_moveList.emplace_back(Move(startSq, endSq, capture, pawn, captured));
-                break;
-            }
+        t_moveList.emplace_back(Move(startSq, endSq, capture));
     } while (westCaptures &= (westCaptures - 1));
 
 
     if (eastCaptures) do {
         int endSq = bitScanForward(eastCaptures);
-        uint64_t captureMask = uint64_t(1) << endSq;
         int startSq = endSq + eastOffset;
-        for (int captured  = pawn; captured < king; captured ++) 
-            if (captureMask & t_board.getBitboard(captured)) {
-                t_moveList.emplace_back(Move(startSq, endSq, capture, pawn, captured));
-                break;
-            }
+        t_moveList.emplace_back(Move(startSq, endSq, capture));
     } while (eastCaptures &= (eastCaptures - 1));
 
 
     if (eastPromoCaptures) do {
         int endSq = bitScanForward(eastPromoCaptures);
-        uint64_t captureMask = uint64_t(1) << endSq;
         int startSq = endSq + eastOffset;
-        for (int captured  = pawn; captured < king; captured ++) 
-            if (captureMask & t_board.getBitboard(captured)) {
-                t_moveList.emplace_back(Move(startSq, endSq, knightPromoCapture, pawn, captured));
-                t_moveList.emplace_back(Move(startSq, endSq, bishopPromoCapture, pawn, captured));
-                t_moveList.emplace_back(Move(startSq, endSq, rookPromoCapture, pawn, captured));
-                t_moveList.emplace_back(Move(startSq, endSq, queenPromoCapture, pawn, captured));
-                break;
-            }
+        t_moveList.emplace_back(Move(startSq, endSq, knightPromoCapture));
+        t_moveList.emplace_back(Move(startSq, endSq, bishopPromoCapture));
+        t_moveList.emplace_back(Move(startSq, endSq, rookPromoCapture));
+        t_moveList.emplace_back(Move(startSq, endSq, queenPromoCapture));
     } while (eastPromoCaptures &= (eastPromoCaptures - 1));
 
     if (westPromoCaptures) do {
         int endSq = bitScanForward(westPromoCaptures);
-        uint64_t captureMask = uint64_t(1) << endSq;
         int startSq = endSq + westOffset;
-        for (int captured  = pawn; captured < king; captured ++) 
-            if (captureMask & t_board.getBitboard(captured)) {
-                t_moveList.emplace_back(Move(startSq, endSq, knightPromoCapture, pawn, captured));
-                t_moveList.emplace_back(Move(startSq, endSq, bishopPromoCapture, pawn, captured));
-                t_moveList.emplace_back(Move(startSq, endSq, rookPromoCapture, pawn, captured));
-                t_moveList.emplace_back(Move(startSq, endSq, queenPromoCapture, pawn, captured));
-                break;
-            }
+        t_moveList.emplace_back(Move(startSq, endSq, knightPromoCapture));
+        t_moveList.emplace_back(Move(startSq, endSq, bishopPromoCapture));
+        t_moveList.emplace_back(Move(startSq, endSq, rookPromoCapture));
+        t_moveList.emplace_back(Move(startSq, endSq, queenPromoCapture));
     } while (westPromoCaptures &= (westPromoCaptures - 1));
 }
 
-void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vector<Move> &t_moveList, const Board &t_board) const
+void MoveGenerator::generateEnPassants(std::vector<Move> &t_moveList, const Board &t_board) const
+{
+    int sideToMove = t_board.getSideToMove();
+    uint64_t pawnSet = t_board.getBitboard(pawn) & t_board.getBitboard(sideToMove);
+    if (sideToMove == white){
+        int epSquare = t_board.getEpSquare();
+        if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) 
+            t_moveList.emplace_back(Move(epSquare + 1, epSquare + 8, enPassant));
+        if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) 
+            t_moveList.emplace_back(Move(epSquare - 1, epSquare + 8, enPassant));
+    }
+    else {
+        int epSquare = t_board.getEpSquare();
+        if (cpyWrapEast(uint64_t(1) << epSquare) & pawnSet) 
+            t_moveList.emplace_back(Move(epSquare + 1, epSquare - 8, enPassant));
+        if (cpyWrapWest(uint64_t(1) << epSquare) & pawnSet) 
+            t_moveList.emplace_back(Move(epSquare - 1, epSquare - 8, enPassant));
+
+    }
+}
+
+void MoveGenerator::captureAttacker(int t_attackerSq, std::vector<Move> &t_moveList, const Board &t_board) const
 {
     uint64_t attackerMask = uint64_t(1) << t_attackerSq;
     int sideToMove = t_board.getSideToMove();
@@ -363,9 +327,9 @@ void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vecto
 
         if((t_board.getEpState() == true) && (t_board.getEpSquare() == t_attackerSq)){
             if (cpyWrapEast(attackerMask) & pawnSet) 
-                t_moveList.emplace_back(Move(t_attackerSq + 1, t_attackerSq + 8, enPassant, pawn, pawn));
+                t_moveList.emplace_back(Move(t_attackerSq + 1, t_attackerSq + 8, enPassant));
             if (cpyWrapWest(attackerMask) & pawnSet) 
-                t_moveList.emplace_back(Move(t_attackerSq - 1, t_attackerSq + 8, enPassant, pawn, pawn));
+                t_moveList.emplace_back(Move(t_attackerSq - 1, t_attackerSq + 8, enPassant));
         }
     }
     else {
@@ -379,25 +343,25 @@ void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vecto
 
         if((t_board.getEpState() == true) && (t_board.getEpSquare() == t_attackerSq)){
             if (cpyWrapEast(attackerMask) & pawnSet) 
-                t_moveList.emplace_back(Move(t_attackerSq + 1, t_attackerSq - 8, enPassant, pawn, pawn));
+                t_moveList.emplace_back(Move(t_attackerSq + 1, t_attackerSq - 8, enPassant));
             if (cpyWrapWest(attackerMask) & pawnSet) 
-                t_moveList.emplace_back(Move(t_attackerSq - 1, t_attackerSq - 8, enPassant, pawn, pawn));
+                t_moveList.emplace_back(Move(t_attackerSq - 1, t_attackerSq - 8, enPassant));
         }
     }
 
-    if (westCaptures) t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, capture, pawn, t_attacker));
-    if (eastCaptures) t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, capture, pawn, t_attacker));
+    if (westCaptures) t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, capture));
+    if (eastCaptures) t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, capture));
     if (westPromoCaptures){
-        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, knightPromoCapture, pawn, t_attacker));
-        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, bishopPromoCapture, pawn, t_attacker));
-        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, rookPromoCapture, pawn, t_attacker));
-        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, queenPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, knightPromoCapture));
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, bishopPromoCapture));
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, rookPromoCapture));
+        t_moveList.emplace_back(Move(t_attackerSq + westOffset, t_attackerSq, queenPromoCapture));
     }
     if (eastPromoCaptures){
-        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, knightPromoCapture, pawn, t_attacker));
-        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, bishopPromoCapture, pawn, t_attacker));
-        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, rookPromoCapture, pawn, t_attacker));
-        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, queenPromoCapture, pawn, t_attacker));
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, knightPromoCapture));
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, bishopPromoCapture));
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, rookPromoCapture));
+        t_moveList.emplace_back(Move(t_attackerSq + eastOffset, t_attackerSq, queenPromoCapture));
     }
 
     //pieces logic
@@ -409,7 +373,7 @@ void MoveGenerator::captureAttacker(int t_attacker, int t_attackerSq, std::vecto
             int startingSquare = bitScanForward(pieceSet);
             uint64_t attackSet = m_lookup.getAttacks(capturingPiece, startingSquare, occupied);
             uint64_t captureSet = attackSet & attackerMask;
-            if (captureSet) t_moveList.emplace_back(Move(startingSquare, t_attackerSq, capture, capturingPiece, t_attacker));
+            if (captureSet) t_moveList.emplace_back(Move(startingSquare, t_attackerSq, capture));
         } while (pieceSet &= (pieceSet - 1));
     }
 }
@@ -446,22 +410,22 @@ void MoveGenerator::blockAttacker(uint64_t t_blockableSquares, std::vector<Move>
     if (pushSet) do {
         int endSq = bitScanForward(pushSet);
         int startSq = endSq + offset;
-        t_moveList.emplace_back(Move(startSq, endSq, quiet, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, quiet));
     } while (pushSet &= (pushSet - 1));
 
     if (promoSet) do {
         int endSq = bitScanForward(promoSet);
         int startSq = endSq + offset;
-        t_moveList.emplace_back(Move(startSq, endSq, knightPromo, pawn));
-        t_moveList.emplace_back(Move(startSq, endSq, bishopPromo, pawn));
-        t_moveList.emplace_back(Move(startSq, endSq, rookPromo, pawn));
-        t_moveList.emplace_back(Move(startSq, endSq, queenPromo, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, knightPromo));
+        t_moveList.emplace_back(Move(startSq, endSq, bishopPromo));
+        t_moveList.emplace_back(Move(startSq, endSq, rookPromo));
+        t_moveList.emplace_back(Move(startSq, endSq, queenPromo));
     } while (promoSet &= (promoSet - 1));
 
     if (doublePushSet) do {
         int endSq = bitScanForward(doublePushSet);
         int startSq = endSq + (2 * offset);
-        t_moveList.emplace_back(Move(startSq, endSq, doublePush, pawn));
+        t_moveList.emplace_back(Move(startSq, endSq, doublePush));
     } while (doublePushSet  &= (doublePushSet - 1));
 
 
@@ -474,7 +438,7 @@ void MoveGenerator::blockAttacker(uint64_t t_blockableSquares, std::vector<Move>
             uint64_t blocks = attackSet & t_blockableSquares;
             if (blocks) do {
                 int endSquare = bitScanForward(blocks);
-                t_moveList.emplace_back(Move(startingSquare, endSquare, quiet, piece));
+                t_moveList.emplace_back(Move(startingSquare, endSquare, quiet));
             } while (blocks &= (blocks - 1));
         } while (pieceSet &= (pieceSet - 1));
     }

@@ -50,17 +50,12 @@ void Engine::mainSearch(int t_maxDepth)
 {
     const std::lock_guard guard(m_engine_mutex);
 
-    static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
     static constexpr int16_t windowSize = 50;
     int16_t eval = 0, alpha = CHECKMATE, beta = -CHECKMATE;
     std::vector<Move> PV;
     Move bestmove;
 
     m_killers.reserve(t_maxDepth);
-
-    m_materialCount = 0;
-    for (int piece = pawn; piece < king; piece ++) m_materialCount += popCount(m_board.getBitboard(piece)) * pieceVal[piece];
-
 
     for(int depth = 0; depth <= t_maxDepth && m_gosearch.load(); depth ++){
         int lowFails = 0, highFails = 0;
@@ -117,7 +112,6 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
 
     m_searchedNodes +=1;
 
-    static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
     int16_t  hashScore, bestScore; 
     int  hashDepth, hashNodeType, bestNodeType = allNode;
     std::vector<Move> line(t_depth), moveList;
@@ -125,18 +119,18 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
 
     bestScore = CHECKMATE - t_depth;
 
-    moveList = orderMoves(t_depth);
+    moveList.reserve(256);
+    orderMoves(t_depth, moveList);
     hashMove = m_TT.getMove(m_board);
 
     // Hash move search
     if (m_TT.contains(m_board) && std::find(moveList.begin(), moveList.end(), hashMove) != moveList.end()){
-
-        if (hashScore == CHECKMATE) hashScore -= t_depth;
-
         hashNodeType = m_TT.getNodeType(m_board);
         hashDepth = m_TT.getDepth(m_board);
         hashScore = m_TT.getScore(m_board);
         
+        if (hashScore == CHECKMATE) hashScore -= t_depth;
+
         if (hashDepth >= t_depth && hashUsageCondition(hashNodeType, hashScore, t_alpha, t_beta)){
             t_PV = line;
             t_PV.emplace_back(hashMove); 
@@ -149,7 +143,6 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
     for(auto move : moveList){
         m_board.makeMove(move);
         if (!isIllegal()){
-            m_materialCount += - pieceVal[move.captured()] + pieceVal[move.promoPiece()];
             int16_t score;
             if (bestNodeType == pvNode){
                 score = -alphaBeta(t_depth - 1, -t_alpha - 1, -t_alpha, line);
@@ -160,7 +153,6 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
             else{
                 score = -alphaBeta(t_depth - 1, -t_beta, -t_alpha, line);
             }
-            m_materialCount += + pieceVal[move.captured()] - pieceVal[move.promoPiece()];
 
             if (score > bestScore) {
                 bestScore = score;
@@ -198,10 +190,11 @@ int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
 {    
     m_searchedNodes += 1;
 
-    static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
+    static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000}; 
     int16_t standPat = evaluate(m_board, gamePhase()) * (m_board.getSideToMove() == white ? 1 : -1);
     int16_t bestScore;
     std::vector<Move> moveList;
+    moveList.reserve(256);
 
     if (isCheck()){
         bestScore = CHECKMATE;
@@ -214,17 +207,20 @@ int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
             if(t_alpha >= t_beta) return bestScore;
         }
         else if(bestScore + (promoThreat() ? 1800 : 1000) < t_alpha) return bestScore;
+        m_generator.generateCaptures(m_board, moveList);
+    
 
-        moveList = m_generator.generateCaptures(m_board);
-        std::sort(moveList.begin(), moveList.end(), [](Move a, Move b){return a.asInt() > b.asInt();});
+        std::sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
+            if (m1.isEnPassant()) return false;
+            else if (m2.isEnPassant()) return true;
+            else return this->m_board.searchCaptured(uint64_t(1) << m1.endSquare()) > this->m_board.searchCaptured(uint64_t(1) << m2.endSquare());
+        });
     }
 
     for (auto move : moveList){
         m_board.makeMove(move);
-        if(!isIllegal() && standPat + pieceVal[move.captured()] + 200 > t_alpha){ 
-            m_materialCount +=  - pieceVal[move.captured()] + pieceVal[move.promoPiece()];
+            if(!isIllegal() && standPat + pieceVal[m_board.getCaptured()] + 200 > t_alpha){ 
             int16_t score = -quiescence(-t_beta, -t_alpha);
-            m_materialCount +=  + pieceVal[move.captured()] - pieceVal[move.promoPiece()];
             
             if (score > bestScore) {
                 bestScore = score; 
@@ -243,7 +239,7 @@ int Engine::gamePhase()
 {
     constexpr int mgMax = 100 * 16 + 300 * 8 + 500 * 4 + 1000 * 2;
 
-    int material = (mgMax < m_materialCount) ? mgMax : m_materialCount;
+    int material = (mgMax < m_board.getMaterialCount()) ? mgMax : m_board.getMaterialCount();
 
     return (100 * material) / mgMax;
 }
@@ -276,15 +272,19 @@ bool Engine::hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, in
         || (hashNodeType == cutNode && hashScore >= t_beta );
 }
 
-std::vector<Move> Engine::orderMoves(int t_depth)
+void Engine::orderMoves(int t_depth, std::vector<Move> &t_moveList)
 {
-    // Capture generation, sorting by MostValuableVictim-LeastValuableAggressor
-    std::vector<Move> captureList = m_generator.generateCaptures(m_board);
-    std::sort(captureList.begin(), captureList.end(), [&](const Move& a, const Move& b){return a.asInt() > b.asInt();});
+    // Capture generation
+    m_generator.generateCaptures(m_board, t_moveList);
+    std::sort(t_moveList.begin(), t_moveList.end(), [this](const Move& m1, const Move& m2){
+        if (m1.isEnPassant()) return false;
+        else if (m2.isEnPassant()) return true;
+        else return this->m_board.searchCaptured(uint64_t(1) << m1.endSquare()) > this->m_board.searchCaptured(uint64_t(1) << m2.endSquare());
+    });
+
+    auto it = t_moveList.end();
+
     // Quiet move generation and sorting by killer moves first
-    std::vector<Move> quietList = m_generator.generateQuiets(m_board);
-    std::partition(quietList.begin(), quietList.end(), [&](const Move& m){return m == m_killers[t_depth][0] || m == m_killers[t_depth][1];});
-    // Joins the two vectors
-    captureList.insert(captureList.end(), quietList.begin(), quietList.end());
-    return captureList;
+    m_generator.generateQuiets(m_board, t_moveList);
+    std::partition(it, t_moveList.end(), [&](const Move& m){return m == m_killers[t_depth][0] || m == m_killers[t_depth][1];});
 }

@@ -15,12 +15,11 @@
 class Engine
 {
 private:
-    TT m_TT;
-    std::vector<std::array<Move, 2>> m_killers;
-    Board m_board;
-    int m_materialCount;
-    uint64_t m_searchedNodes;
     const MoveGenerator m_generator;
+    std::vector<std::array<Move, 2>> m_killers;
+    TT m_TT;
+    Board m_board;
+    uint64_t m_searchedNodes;
 
 
     std::atomic<bool> m_gosearch = false;
@@ -46,5 +45,5 @@ private:
     bool isCheck();   // opponent side gives check and its your turn
     bool promoThreat();
     bool hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta);
-    std::vector<Move> orderMoves(int t_depth);
+    void orderMoves(int t_depth, std::vector<Move>& t_moveList);
 };

@@ -48,7 +48,7 @@ Board::Board(std::string t_FEN)
     setKingSquare(black, bitScanForward(m_bitboard[king] & m_bitboard[black]));
 
     // Set side to move
-    tolower(sideToMove[0]) == 'w' ? m_stateHist.back() &= ~0x1 : m_stateHist.back() |= 0x1;
+    if (tolower(sideToMove[0]) != 'w') toggleSideToMove();
 
     // Set castling rights
     for (char character : castleRights) switch (character)
@@ -61,13 +61,18 @@ Board::Board(std::string t_FEN)
 
 
     // Set ep square
-    if (epSquare.compare("-") != 0) m_stateHist.back() |= (1 << 5) | ((1 << atoi(epSquare.c_str())) << 6);
+    if (epSquare.compare("-") != 0) setEpSquare(atoi(epSquare.c_str()));
 
     // Set HMC
-    m_stateHist.back() += atoi(halfmoveClock.c_str()) << 24;
+    for (int i = 0; i < atoi(halfmoveClock.c_str()); i ++) incrementHMC();
+
+    // Set material count
+    m_materialCount = 0;
+    static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
+    for (int piece = pawn; piece < king; piece ++) m_materialCount += popCount(m_bitboard[piece]) * pieceVal[piece];
 }
 
-Board::Board(const Board &t_other) : m_bitboard{t_other.m_bitboard}
+Board::Board(const Board &t_other) : m_bitboard{t_other.m_bitboard}, m_materialCount{t_other.m_materialCount}
 {
     m_stateHist.emplace_back(t_other.m_stateHist.back());
 }
@@ -76,10 +81,12 @@ Board &Board::operator=(const Board &t_other)
 {
     if(this != &t_other){
         m_bitboard = t_other.m_bitboard;
+        m_materialCount = t_other.m_materialCount;
         m_stateHist.emplace_back(t_other.m_stateHist.back());
     }
     return *this;
 }
+
 
 bool Board::operator==(const Board &t_other) const
 {
@@ -91,11 +98,11 @@ bool Board::operator!=(const Board &t_other) const
     return (m_bitboard != t_other.m_bitboard) || (m_stateHist.back() != t_other.m_stateHist.back());
 }
 
-uint64_t Board::getHash() const
+uint32_t Board::getHash() const
 {
-    uint64_t key = 0ULL;
-    for(uint64_t bitboard : m_bitboard) key ^= hash64(bitboard);
-    key ^= uint64_t(hash32(m_stateHist.back())) << 32;
+    uint32_t key = 0;
+    for(uint64_t bitboard : m_bitboard) key ^= hash32(uint32_t(bitboard)) ^ hash32(uint32_t(bitboard >> 32));
+    key ^= uint32_t(hash32(m_stateHist.back()));
 
     return key;
 }
@@ -105,96 +112,185 @@ void Board::makeMove(const Move &t_move)
     // ALWAYS removes en-passant and en-passant square
     // removes castling depending on the move type
     static constexpr uint32_t stateMask[64] = {
-        0xfffff017, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff015, 0xfffff01f, 0xfffff01f, 0xfffff01d,
-        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
-        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
-        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
-        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
-        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
-        0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff01f,
-        0xfffff00f, 0xfffff01f, 0xfffff01f, 0xfffff01f, 0xfffff00b, 0xfffff01f, 0xfffff01f, 0xfffff01b
+        0xffffe017, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe015, 0xffffe01f, 0xffffe01f, 0xffffe01d,
+        0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
+        0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
+        0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
+        0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
+        0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
+        0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
+        0xffffe00f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe00b, 0xffffe01f, 0xffffe01f, 0xffffe01b
     };
+    uint64_t moveMask = uint64_t(1) << t_move.startingSquare() | uint64_t(1) << t_move.endSquare();
+    int movedPiece, capturedPiece;
+    int sideToMove = getSideToMove();
+
     m_stateHist.emplace_back(m_stateHist.back());
     m_stateHist.back() &= stateMask[t_move.startingSquare()] & stateMask[t_move.endSquare()];
-    if (t_move.isCapture() || t_move.piece() == pawn) resetHMC(); else incrementHMC();
-    if (t_move.piece() == king) setKingSquare(getSideToMove(), t_move.endSquare());
-    if (t_move.isDoublePush()) {m_stateHist.back() |= 1 << 5; m_stateHist.back() |= (t_move.endSquare() & 0x3f) << 6;}
-    updateBitboards(t_move);
+    switch (t_move.flag()){
+    case quiet:
+        movedPiece = searchMoved(moveMask);
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[movedPiece] ^= moveMask;        
+        if (movedPiece == pawn) resetHMC();
+        else {
+            incrementHMC();
+            if (movedPiece == king) setKingSquare(sideToMove, t_move.endSquare());
+        }
+        break;
+    case doublePush:
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[pawn] ^= moveMask;
+        setEpSquare(t_move.endSquare());
+        resetHMC();
+        break;
+    case kingCastle:
+        static constexpr uint64_t kingCastleMask[2] = {uint64_t(0x00000000000000a0), uint64_t(0xa000000000000000)};
+        m_bitboard[sideToMove] ^= kingCastleMask[sideToMove] | moveMask;
+        m_bitboard[king] ^= moveMask;
+        m_bitboard[rook] ^= kingCastleMask[sideToMove];
+        setKingSquare(sideToMove, t_move.endSquare());
+        incrementHMC();
+        break;
+    case queenCastle:
+        static constexpr uint64_t queenCastleMask[2] = {uint64_t(0x0000000000000009), uint64_t(0x0900000000000000)};
+        m_bitboard[sideToMove] ^= queenCastleMask[sideToMove] | moveMask;
+        m_bitboard[king] ^= moveMask;
+        m_bitboard[rook] ^= queenCastleMask[sideToMove];
+        setKingSquare(sideToMove, t_move.endSquare());
+        incrementHMC();
+        break;
+    case capture:
+        movedPiece = searchMoved(moveMask);
+        capturedPiece = searchCaptured(moveMask);
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[movedPiece] ^= moveMask;
+        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
+        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
+        if (movedPiece == king) setKingSquare(sideToMove, t_move.endSquare());
+        decreaseMaterialCount(capturedPiece);
+        setCaptured(capturedPiece);
+        resetHMC();
+        break;
+    case enPassant:
+        static constexpr int offset[2] = {-8, 8};
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[pawn] ^= moveMask;
+        m_bitboard[1-sideToMove] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
+        m_bitboard[pawn] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
+        decreaseMaterialCount(pawn);
+        setCaptured(pawn);
+        resetHMC();
+        break;
+    case knightPromoCapture:
+    case bishopPromoCapture:
+    case rookPromoCapture:
+    case queenPromoCapture:
+        capturedPiece = searchCaptured(moveMask);
+        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
+        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
+        decreaseMaterialCount(capturedPiece);
+        setCaptured(capturedPiece);
+        [[fallthrough]];
+    case knightPromo:
+    case bishopPromo:
+    case rookPromo:
+    case queenPromo:
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[pawn] ^= uint64_t(1) << t_move.startingSquare();
+        m_bitboard[t_move.promoPiece()] ^= uint64_t(1) << t_move.endSquare();
+        decreaseMaterialCount(pawn);
+        increaseMaterialCount(t_move.promoPiece());
+        resetHMC();
+        break;
+    }
+
     toggleSideToMove();
 }
 
 void Board::undoMove(const Move &t_move)
 {
-    m_stateHist.pop_back();
-    updateBitboards(t_move);
-}
+    uint64_t moveMask = uint64_t(1) << t_move.startingSquare() | uint64_t(1) << t_move.endSquare();
+    int movedPiece, capturedPiece;
+    toggleSideToMove();
+    int sideToMove = getSideToMove();
 
-void Board::updateBitboards(const Move &t_move)
-{
-    uint64_t endSqMask = uint64_t(1) << t_move.endSquare();
-    uint64_t moveMask = (uint64_t(1) << t_move.startingSquare()) | endSqMask;   
-    m_bitboard[getSideToMove()] ^= moveMask;
-    m_bitboard[t_move.piece()] ^= moveMask;
-
+    
     switch (t_move.flag()){
+    case quiet:
+        movedPiece = searchMoved(moveMask);
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[movedPiece] ^= moveMask;
+        break;
+    case doublePush:
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[pawn] ^= moveMask;
+        break;
     case kingCastle:
         static constexpr uint64_t kingCastleMask[2] = {uint64_t(0x00000000000000a0), uint64_t(0xa000000000000000)};
-        m_bitboard[getSideToMove()] ^= kingCastleMask[getSideToMove()];
-        m_bitboard[rook] ^= kingCastleMask[getSideToMove()];
+        m_bitboard[sideToMove] ^= kingCastleMask[sideToMove] | moveMask;
+        m_bitboard[king] ^= moveMask;
+        m_bitboard[rook] ^= kingCastleMask[sideToMove];
         break;
     case queenCastle:
         static constexpr uint64_t queenCastleMask[2] = {uint64_t(0x0000000000000009), uint64_t(0x0900000000000000)};
-        m_bitboard[getSideToMove()] ^= queenCastleMask[getSideToMove()];
-        m_bitboard[rook] ^= queenCastleMask[getSideToMove()];
+        m_bitboard[sideToMove] ^= queenCastleMask[sideToMove] | moveMask;
+        m_bitboard[king] ^= moveMask;
+        m_bitboard[rook] ^= queenCastleMask[sideToMove];
         break;
     case capture:
-        m_bitboard[1-getSideToMove()] ^= endSqMask;
-        m_bitboard[t_move.captured()] ^= endSqMask;
+        movedPiece = searchMoved(moveMask);
+        capturedPiece = getCaptured();
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[movedPiece] ^= moveMask;
+        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
+        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
+        increaseMaterialCount(capturedPiece);
         break;
     case enPassant:
         static constexpr int offset[2] = {-8, 8};
-        m_bitboard[1-getSideToMove()] ^= uint64_t(1) << (t_move.endSquare() + offset[getSideToMove()]);
-        m_bitboard[pawn] ^= uint64_t(1) << (t_move.endSquare() + offset[getSideToMove()]);
-        break;
-    case knightPromo:
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[knight] ^= endSqMask;
-        break;
-    case bishopPromo:
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[bishop] ^= endSqMask;
-        break;
-    case rookPromo:
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[rook] ^= endSqMask;
-        break;
-    case queenPromo:
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[queen] ^= endSqMask;
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[pawn] ^= moveMask;
+        m_bitboard[1-sideToMove] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
+        m_bitboard[pawn] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
+        increaseMaterialCount(pawn);
         break;
     case knightPromoCapture:
-        m_bitboard[1-getSideToMove()] ^= endSqMask;
-        m_bitboard[t_move.captured()] ^= endSqMask;
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[knight] ^= endSqMask;
-        break;
     case bishopPromoCapture:
-        m_bitboard[1-getSideToMove()] ^= endSqMask;
-        m_bitboard[t_move.captured()] ^= endSqMask;
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[bishop] ^= endSqMask;
-        break;
     case rookPromoCapture:
-        m_bitboard[1-getSideToMove()] ^= endSqMask;
-        m_bitboard[t_move.captured()] ^= endSqMask;
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[rook] ^= endSqMask;
-        break;
     case queenPromoCapture:
-        m_bitboard[1-getSideToMove()] ^= endSqMask;
-        m_bitboard[t_move.captured()] ^= endSqMask;
-        m_bitboard[pawn] ^= endSqMask;
-        m_bitboard[queen] ^= endSqMask;
+        capturedPiece = getCaptured();
+        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
+        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
+        increaseMaterialCount(capturedPiece);
+        [[fallthrough]];
+    case knightPromo:
+    case bishopPromo:
+    case rookPromo:
+    case queenPromo:
+        m_bitboard[sideToMove] ^= moveMask;
+        m_bitboard[pawn] ^= uint64_t(1) << t_move.startingSquare();
+        m_bitboard[t_move.promoPiece()] ^= uint64_t(1) << t_move.endSquare();
+        increaseMaterialCount(pawn);
+        decreaseMaterialCount(t_move.promoPiece());
+        resetHMC();
         break;
     }
+
+    m_stateHist.pop_back();
 }
+
+int Board::searchMoved(const uint64_t &t_moveMask) const
+{
+    for (int piece = pawn; piece <= king; piece ++) 
+        if (m_bitboard[piece] & m_bitboard[getSideToMove()] & t_moveMask) return piece;
+    throw std::runtime_error("moved piece not found");
+}
+
+int Board::searchCaptured(const uint64_t &t_moveMask) const
+{
+    for (int piece = queen; piece >= pawn; piece--) 
+        if (m_bitboard[piece] & m_bitboard[1 - getSideToMove()] & t_moveMask) return piece;
+    throw std::runtime_error("moved piece not found");
+}
+

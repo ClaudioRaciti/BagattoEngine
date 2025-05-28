@@ -6,17 +6,9 @@ Move::Move(const Move &t_ohter)
     m_move = t_ohter.m_move;
 }
 
-Move::Move(int t_from, int t_to, int t_flag, int t_piece)
+Move::Move(int t_from, int t_to, int t_flag)
 {
-    m_move = ((t_piece & 0x0f) << 16 | (t_flag & 0x0f) << 12 | (t_from & 0x3f) << 6 | (t_to & 0x3f));
-}
-
-Move::Move(int t_from, int t_to, int t_flag, int t_piece, int t_captured)
-{
-    static constexpr int pieceValue[8] = {0, 0, 1, 3, 3, 5, 10, 100};
-    m_move =  (t_flag & 0x0f) << 12 | (t_from & 0x3f) << 6 | (t_to & 0x3f);
-    m_move |= (t_captured & 0x0f) << 19 | (t_piece & 0x0f) << 16;
-    m_move |= (pieceValue[t_captured] - pieceValue[t_piece]) << 22;
+    m_move = (t_flag & 0x0f) << 12 | (t_from & 0x3f) << 6 | (t_to & 0x3f);
 }
 
 void Move::operator=(Move otherObj)

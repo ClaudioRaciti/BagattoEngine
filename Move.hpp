@@ -9,8 +9,7 @@ class Move{
 public:
     Move(): m_move{0U}{}
     Move(const Move &);
-    Move(int t_from, int t_to, int t_flag, int t_piece);
-    Move(int t_from, int t_to, int t_flag, int t_piece, int t_captured);
+    Move(int t_from, int t_to, int t_flag);
 
     void operator= (Move otherObj);
     friend bool operator== (const Move& thisObj, const Move& otherObj);
@@ -22,9 +21,6 @@ public:
     inline int endSquare()  const {return m_move & 0x3f;}
     inline int startingSquare() const {return (m_move >> 6) & 0x3f;}
     inline int flag()       const {return (m_move >> 12) & 0x0f;}
-    inline int piece()      const {return (m_move >> 16) & 0x07;}
-    inline int captured()   const {return (m_move >> 19) & 0x07;}
-    inline int mvvLva()     const {return int8_t((m_move >> 22) & 0xff);}
     inline int asInt()      const {return m_move;}
     inline int promoPiece() const {return (flag() & 0x03) + knight;}
 
@@ -36,5 +32,5 @@ public:
     inline bool isCastle()     const {return (flag() == kingCastle) || (flag() == queenCastle);}
 
 private:
-    uint32_t m_move;
+    uint16_t m_move;
 };

@@ -68,9 +68,9 @@ int main(){
             }
         }
         else if (input.rfind("go", 0) == 0) {
-            engine.goSearch(99);
-            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-            engine.stopSearch();
+            engine.goSearch(10);
+            // std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+            // engine.stopSearch();
         }
         else if (input == "stop"){
             engine.stopSearch();

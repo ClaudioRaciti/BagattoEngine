@@ -13,8 +13,8 @@ TT::~TT()
 
 void TT::insert(Board &t_key, const int16_t &t_score, const int &t_depth, const int &t_nodeType, const Move &t_hashMove)
 {
-    uint64_t zobristKey = t_key.getHash();
-    size_t index = zobristKey % m_tableSize;
+    uint32_t zobristKey = t_key.getHash();
+    uint32_t index = zobristKey % m_tableSize;
     m_table[index] = Entry{(zobristKey), TTValue(t_score, t_depth, t_nodeType), t_hashMove};
 }
 
@@ -51,14 +51,14 @@ int TT::getNodeType(const Board &t_key) const
 
 bool TT::contains(const Board &t_key) const
 {
-    uint64_t zobristKey = t_key.getHash();
+    uint32_t zobristKey = t_key.getHash();
     size_t index = zobristKey % m_tableSize;
     return m_table[index].key == (zobristKey);
 }
 
 bool TT::contains(const Board &t_key, int16_t &t_score, int &t_depth, int &t_nodeType, Move &t_hashMove)
 {
-    uint64_t zobristKey = t_key.getHash();
+    uint32_t zobristKey = t_key.getHash();
     size_t index = zobristKey % m_tableSize;
     if (m_table[index].key == zobristKey){
         t_score = m_table[index].value.score();
