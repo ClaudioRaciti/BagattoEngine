@@ -121,10 +121,10 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
 
     moveList.reserve(256);
     orderMoves(t_depth, moveList);
-    hashMove = m_TT.getMove(m_board);
 
     // Hash move search
-    if (m_TT.contains(m_board) && std::find(moveList.begin(), moveList.end(), hashMove) != moveList.end()){
+    if (m_TT.contains(m_board)){
+        hashMove = m_TT.getMove(m_board);
         hashNodeType = m_TT.getNodeType(m_board);
         hashDepth = m_TT.getDepth(m_board);
         hashScore = m_TT.getScore(m_board);
@@ -213,7 +213,7 @@ int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
         std::sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
             if (m1.isEnPassant()) return false;
             else if (m2.isEnPassant()) return true;
-            else return this->m_board.searchCaptured(uint64_t(1) << m1.endSquare()) > this->m_board.searchCaptured(uint64_t(1) << m2.endSquare());
+            else return this->m_board.searchCaptured(m1.newSquare()) > this->m_board.searchCaptured(m2.newSquare());
         });
     }
 
@@ -279,7 +279,7 @@ void Engine::orderMoves(int t_depth, std::vector<Move> &t_moveList)
     std::sort(t_moveList.begin(), t_moveList.end(), [this](const Move& m1, const Move& m2){
         if (m1.isEnPassant()) return false;
         else if (m2.isEnPassant()) return true;
-        else return this->m_board.searchCaptured(uint64_t(1) << m1.endSquare()) > this->m_board.searchCaptured(uint64_t(1) << m2.endSquare());
+        else return this->m_board.searchCaptured(m1.newSquare()) > this->m_board.searchCaptured(m2.newSquare());
     });
 
     auto it = t_moveList.end();

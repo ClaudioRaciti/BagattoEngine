@@ -9,7 +9,7 @@
 class TT {
 private:
     struct Entry {
-        uint32_t key;
+        uint64_t key;
         TTValue value;
         Move hashMove;
     };

@@ -43,8 +43,8 @@ std::string Move::asString() const
         to rook"},{15,"capture and promotion to queen"}
     };
 
-    output += squares[startingSquare()];
-    output += squares[endSquare()];
+    output += squares[oldSquare()];
+    output += squares[newSquare()];
     if (isPromo()) output += pieces[promoPiece()];
 
     return output;

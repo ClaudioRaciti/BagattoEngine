@@ -25,6 +25,8 @@ add_executable(
     evaluation.cpp
     Engine.hpp
     Engine.cpp
+    Zobrist.hpp
+    Zobrist.cpp
 )
 
 include(CTest)

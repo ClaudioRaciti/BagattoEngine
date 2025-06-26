@@ -18,8 +18,8 @@ public:
 
     std::string asString() const;
 
-    inline int endSquare()  const {return m_move & 0x3f;}
-    inline int startingSquare() const {return (m_move >> 6) & 0x3f;}
+    inline int newSquare()  const {return m_move & 0x3f;}
+    inline int oldSquare() const {return (m_move >> 6) & 0x3f;}
     inline int flag()       const {return (m_move >> 12) & 0x0f;}
     inline int asInt()      const {return m_move;}
     inline int promoPiece() const {return (flag() & 0x03) + knight;}

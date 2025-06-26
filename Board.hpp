@@ -4,12 +4,13 @@
 #include <vector>
 #include <array>
 #include "Move.hpp"
+#include "Zobrist.hpp"
 #include <cassert>
 
 class Board
 {
 public:
-    Board() = default;
+    Board(): m_zobrist{Zobrist::getInstance()}{}
     Board(std::string t_FEN);
     Board(const Board&);
     Board& operator= (const Board&);
@@ -20,6 +21,7 @@ public:
 
 
     inline int  getSideToMove() const               {return m_stateHist.back() & 0x1;}
+    inline int  getCastles() const                  {return (m_stateHist.back() >> 1) & 0xf;}
     inline bool getShortCastle (int t_side) const   {return (m_stateHist.back() >> (t_side + 1)) & 0x1;}
     inline bool getLongCastle (int t_side) const    {return (m_stateHist.back() >> (t_side + 3)) & 0x1;}
     inline bool getEpState() const                  {return (m_stateHist.back() >> 5) & 0x01;}
@@ -30,17 +32,21 @@ public:
 
     inline int getMaterialCount() const {return m_materialCount;}
 
-    uint32_t getHash() const;
+    uint64_t getHash() const;
 
     void makeMove(const Move &t_move);
     void undoMove(const Move &t_move);
 
-    int searchMoved(const uint64_t &t_moveMask) const;
-    int searchCaptured(const uint64_t &t_moveMask) const;
+    int searchMoved(const int &t_moveMask) const;
+    int searchCaptured(const int &t_moveMask) const;
 
 private:
     
-    inline void toggleSideToMove()              {m_stateHist.back() ^= 0x01;}
+    void movePiece(int stm, int piece, int from, int to);
+    void capturePiece(int stm, int piece, int sq);
+    void promotePiece(int stm, int piece, int from, int to);
+
+    inline void toggleSideToMove()              {m_stateHist.back() ^= 0x01; m_zobristKey ^= m_zobrist.getSTMKey();}
     inline void removeShortCastle (int t_side)  {m_stateHist.back() &= ~(0x1 << (t_side + 1));}
     inline void removeLongCastle (int t_side)   {m_stateHist.back() &= ~(0x1 << (t_side + 3));}
     inline void setEpSquare (int t_square )     {m_stateHist.back() |= (1 << 5) | ((t_square - 24)  << 6);}
@@ -51,6 +57,8 @@ private:
                                             }
     inline void incrementHMC()                  {m_stateHist.back() += 0x1 << 25;}
     inline void resetHMC()                      {m_stateHist.back() &= ~(0x7f << 25);}
+    
+    inline size_t getIndex(int sideToMove, int piece, int square) const {return 384 * sideToMove + 64 * (piece - pawn) + square;}
 
     inline void decreaseMaterialCount(int piece) {
         static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
@@ -65,12 +73,13 @@ private:
 private:
     std::array<uint64_t, 8> m_bitboard;
     std::vector<uint32_t> m_stateHist;
+    uint64_t m_zobristKey = 0ULL;
     int m_materialCount;
 
+    const Zobrist& m_zobrist;
+
     // stateHist entries are 32 bits arranged like:
-    //
-    // what i want is [srrrrEeeeewwwwwwbbbbbb5555555ccc]
-    // what i got is  [srrrrEeeee??wwwwwwbbbbbb5555555?]
+    // what i want is [srrrrEeeeecccwwwwwwbbbbbb5555555]
     //
     // Where:
     // first 1 bit for side to move     [s]

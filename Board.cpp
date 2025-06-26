@@ -2,9 +2,10 @@
 #include "utils.hpp"
 #include <cassert>
 #include <bitset>
+#include <random>
 
-Board::Board(std::string t_FEN)
-{
+Board::Board(std::string t_FEN):
+    m_zobrist{Zobrist::getInstance()}{
     std::vector<std::string> dataFields = split(t_FEN, ' ');
     std::string boardField = dataFields[0];
     std::string sideToMove = dataFields[1];
@@ -28,18 +29,66 @@ Board::Board(std::string t_FEN)
             if (isdigit(squareContent)) file += squareContent - '1';
             else switch (squareContent)
             {
-            case 'p': m_bitboard[pawn]  |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
-            case 'P': m_bitboard[pawn]  |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
-            case 'n': m_bitboard[knight]|= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
-            case 'N': m_bitboard[knight]|= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
-            case 'b': m_bitboard[bishop]|= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
-            case 'B': m_bitboard[bishop]|= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
-            case 'r': m_bitboard[rook]  |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
-            case 'R': m_bitboard[rook]  |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
-            case 'q': m_bitboard[queen] |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
-            case 'Q': m_bitboard[queen] |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
-            case 'k': m_bitboard[king]  |= uint64_t(1) << squareNumber; m_bitboard[black] |= uint64_t(1) << squareNumber; break;
-            case 'K': m_bitboard[king]  |= uint64_t(1) << squareNumber; m_bitboard[white] |= uint64_t(1) << squareNumber; break;
+            case 'p': 
+                m_bitboard[pawn]  |= uint64_t(1) << squareNumber; 
+                m_bitboard[black] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(black, pawn, squareNumber);
+                break;
+            case 'P': 
+                m_bitboard[pawn]  |= uint64_t(1) << squareNumber; 
+                m_bitboard[white] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(white, pawn, squareNumber);
+                break;
+            case 'n': 
+                m_bitboard[knight]|= uint64_t(1) << squareNumber; 
+                m_bitboard[black] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(black, knight, squareNumber);
+                break;
+            case 'N': 
+                m_bitboard[knight]|= uint64_t(1) << squareNumber; 
+                m_bitboard[white] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(white, knight, squareNumber);
+                break;
+            case 'b': 
+                m_bitboard[bishop]|= uint64_t(1) << squareNumber; 
+                m_bitboard[black] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(black, bishop, squareNumber);
+                break;
+            case 'B': 
+                m_bitboard[bishop]|= uint64_t(1) << squareNumber; 
+                m_bitboard[white] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(white, bishop, squareNumber);
+                break;
+            case 'r': 
+                m_bitboard[rook]  |= uint64_t(1) << squareNumber; 
+                m_bitboard[black] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(black, rook, squareNumber);
+                break;
+            case 'R': 
+                m_bitboard[rook]  |= uint64_t(1) << squareNumber; 
+                m_bitboard[white] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(white, rook, squareNumber);
+                break;
+            case 'q': 
+                m_bitboard[queen] |= uint64_t(1) << squareNumber; 
+                m_bitboard[black] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(black, queen, squareNumber);
+                break;
+            case 'Q': 
+                m_bitboard[queen] |= uint64_t(1) << squareNumber; 
+                m_bitboard[white] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(white, queen, squareNumber);
+                break;
+            case 'k': 
+                m_bitboard[king]  |= uint64_t(1) << squareNumber; 
+                m_bitboard[black] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(black, king, squareNumber);
+                break;
+            case 'K': 
+                m_bitboard[king]  |= uint64_t(1) << squareNumber; 
+                m_bitboard[white] |= uint64_t(1) << squareNumber; 
+                m_zobristKey ^= m_zobrist.getPieceKey(white, king, squareNumber);
+                break;
             }
         }
     }
@@ -48,7 +97,10 @@ Board::Board(std::string t_FEN)
     setKingSquare(black, bitScanForward(m_bitboard[king] & m_bitboard[black]));
 
     // Set side to move
-    if (tolower(sideToMove[0]) != 'w') toggleSideToMove();
+    if (tolower(sideToMove[0]) != 'w') {
+        toggleSideToMove();
+        m_zobristKey ^= m_zobrist.getSTMKey();
+    }
 
     // Set castling rights
     for (char character : castleRights) switch (character)
@@ -58,10 +110,13 @@ Board::Board(std::string t_FEN)
     case 'K': m_stateHist.back() |= uint32_t(1) << 1; break;
     case 'Q': m_stateHist.back() |= uint32_t(1) << 3; break;
     }
-
+    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
 
     // Set ep square
-    if (epSquare.compare("-") != 0) setEpSquare(atoi(epSquare.c_str()));
+    if (epSquare.compare("-") != 0) {
+        setEpSquare(atoi(epSquare.c_str()));
+        m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8); 
+    }
 
     // Set HMC
     for (int i = 0; i < atoi(halfmoveClock.c_str()); i ++) incrementHMC();
@@ -72,9 +127,13 @@ Board::Board(std::string t_FEN)
     for (int piece = pawn; piece < king; piece ++) m_materialCount += popCount(m_bitboard[piece]) * pieceVal[piece];
 }
 
-Board::Board(const Board &t_other) : m_bitboard{t_other.m_bitboard}, m_materialCount{t_other.m_materialCount}
+Board::Board(const Board &t_other) : 
+    m_bitboard{t_other.m_bitboard}, 
+    m_zobristKey(t_other.m_zobristKey) ,
+    m_materialCount{t_other.m_materialCount},
+    m_zobrist{Zobrist::getInstance()}
 {
-    m_stateHist.emplace_back(t_other.m_stateHist.back());
+    if(t_other.m_stateHist.size())m_stateHist.emplace_back(t_other.m_stateHist.back());
 }
 
 Board &Board::operator=(const Board &t_other)
@@ -82,7 +141,8 @@ Board &Board::operator=(const Board &t_other)
     if(this != &t_other){
         m_bitboard = t_other.m_bitboard;
         m_materialCount = t_other.m_materialCount;
-        m_stateHist.emplace_back(t_other.m_stateHist.back());
+        m_zobristKey = t_other.m_zobristKey;
+        if(t_other.m_stateHist.size())m_stateHist.emplace_back(t_other.m_stateHist.back());
     }
     return *this;
 }
@@ -90,25 +150,31 @@ Board &Board::operator=(const Board &t_other)
 
 bool Board::operator==(const Board &t_other) const
 {
-    return (m_bitboard == t_other.m_bitboard) && (m_stateHist.back() == t_other.m_stateHist.back());
+    static constexpr uint32_t mask = uint32_t(0x7f) << 25 | uint32_t(0x7) << 10;
+    return (m_bitboard == t_other.m_bitboard) && ((m_stateHist.back() & ~mask) == (t_other.m_stateHist.back() & ~mask));
 }
 
 bool Board::operator!=(const Board &t_other) const
 {
-    return (m_bitboard != t_other.m_bitboard) || (m_stateHist.back() != t_other.m_stateHist.back());
+    static constexpr uint32_t mask = uint32_t(0x7f) << 25 | uint32_t(0x7) << 10;
+    return (m_bitboard != t_other.m_bitboard) || ((m_stateHist.back() & ~mask) != (t_other.m_stateHist.back() & ~mask));
 }
 
-uint32_t Board::getHash() const
+uint64_t Board::getHash() const
 {
-    uint32_t key = 0;
-    for(uint64_t bitboard : m_bitboard) key ^= hash32(uint32_t(bitboard)) ^ hash32(uint32_t(bitboard >> 32));
-    key ^= uint32_t(hash32(m_stateHist.back()));
-
-    return key;
+    return m_zobristKey;
 }
 
 void Board::makeMove(const Move &t_move)
 {
+    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
+    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
+
+    int piece, captured;
+    int from = t_move.oldSquare();
+    int to = t_move.newSquare();
+    int stm = getSideToMove();
+
     // ALWAYS removes en-passant and en-passant square
     // removes castling depending on the move type
     static constexpr uint32_t stateMask[64] = {
@@ -121,176 +187,176 @@ void Board::makeMove(const Move &t_move)
         0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
         0xffffe00f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe00b, 0xffffe01f, 0xffffe01f, 0xffffe01b
     };
-    uint64_t moveMask = uint64_t(1) << t_move.startingSquare() | uint64_t(1) << t_move.endSquare();
-    int movedPiece, capturedPiece;
-    int sideToMove = getSideToMove();
-
     m_stateHist.emplace_back(m_stateHist.back());
-    m_stateHist.back() &= stateMask[t_move.startingSquare()] & stateMask[t_move.endSquare()];
+    m_stateHist.back() &= stateMask[from] & stateMask[to];
+    incrementHMC();
+
     switch (t_move.flag()){
     case quiet:
-        movedPiece = searchMoved(moveMask);
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[movedPiece] ^= moveMask;        
-        if (movedPiece == pawn) resetHMC();
-        else {
-            incrementHMC();
-            if (movedPiece == king) setKingSquare(sideToMove, t_move.endSquare());
-        }
+        piece = searchMoved(from);
+        movePiece(stm, piece, from, to);    
+        if (piece == pawn) resetHMC();
+        else if (piece == king) setKingSquare(stm, to);
         break;
     case doublePush:
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[pawn] ^= moveMask;
-        setEpSquare(t_move.endSquare());
-        resetHMC();
+        movePiece(stm, pawn, from, to);
+        setEpSquare(to);
         break;
     case kingCastle:
-        static constexpr uint64_t kingCastleMask[2] = {uint64_t(0x00000000000000a0), uint64_t(0xa000000000000000)};
-        m_bitboard[sideToMove] ^= kingCastleMask[sideToMove] | moveMask;
-        m_bitboard[king] ^= moveMask;
-        m_bitboard[rook] ^= kingCastleMask[sideToMove];
-        setKingSquare(sideToMove, t_move.endSquare());
-        incrementHMC();
+        static constexpr int KCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
+        movePiece(stm, king, from, to);
+        movePiece(stm, rook, h1 + KCoffset[stm], f1 + KCoffset[stm]); 
+        setKingSquare(stm, to);
         break;
     case queenCastle:
-        static constexpr uint64_t queenCastleMask[2] = {uint64_t(0x0000000000000009), uint64_t(0x0900000000000000)};
-        m_bitboard[sideToMove] ^= queenCastleMask[sideToMove] | moveMask;
-        m_bitboard[king] ^= moveMask;
-        m_bitboard[rook] ^= queenCastleMask[sideToMove];
-        setKingSquare(sideToMove, t_move.endSquare());
-        incrementHMC();
+        static constexpr int QCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
+        movePiece(stm, king, from, to);
+        movePiece(stm, rook, a1 + QCoffset[stm], d1 + QCoffset[stm]); 
+        setKingSquare(stm, to);
         break;
     case capture:
-        movedPiece = searchMoved(moveMask);
-        capturedPiece = searchCaptured(moveMask);
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[movedPiece] ^= moveMask;
-        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
-        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
-        if (movedPiece == king) setKingSquare(sideToMove, t_move.endSquare());
-        decreaseMaterialCount(capturedPiece);
-        setCaptured(capturedPiece);
-        resetHMC();
+        piece = searchMoved(from);
+        captured = searchCaptured(to);
+        movePiece(stm, piece, from, to);
+        capturePiece(stm, captured, to);
+
+        if (piece == king) setKingSquare(stm, t_move.newSquare());
+        decreaseMaterialCount(captured);
+        setCaptured(captured);
         break;
     case enPassant:
         static constexpr int offset[2] = {-8, 8};
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[pawn] ^= moveMask;
-        m_bitboard[1-sideToMove] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
-        m_bitboard[pawn] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
+        movePiece(stm, pawn, from, to);
+        capturePiece(stm, pawn, to + offset[stm]);
         decreaseMaterialCount(pawn);
         setCaptured(pawn);
-        resetHMC();
         break;
     case knightPromoCapture:
     case bishopPromoCapture:
     case rookPromoCapture:
     case queenPromoCapture:
-        capturedPiece = searchCaptured(moveMask);
-        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
-        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
-        decreaseMaterialCount(capturedPiece);
-        setCaptured(capturedPiece);
+        captured = searchCaptured(to);
+        capturePiece(stm, captured, to);
+        decreaseMaterialCount(captured);
+        setCaptured(captured);
         [[fallthrough]];
     case knightPromo:
     case bishopPromo:
     case rookPromo:
     case queenPromo:
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[pawn] ^= uint64_t(1) << t_move.startingSquare();
-        m_bitboard[t_move.promoPiece()] ^= uint64_t(1) << t_move.endSquare();
+        promotePiece(stm, t_move.promoPiece(), from, to);
         decreaseMaterialCount(pawn);
         increaseMaterialCount(t_move.promoPiece());
-        resetHMC();
         break;
     }
 
     toggleSideToMove();
+
+    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
+    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
 }
 
 void Board::undoMove(const Move &t_move)
 {
-    uint64_t moveMask = uint64_t(1) << t_move.startingSquare() | uint64_t(1) << t_move.endSquare();
-    int movedPiece, capturedPiece;
+    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
+    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
+
     toggleSideToMove();
-    int sideToMove = getSideToMove();
+    int from = t_move.oldSquare();
+    int to = t_move.newSquare();
+    int stm = getSideToMove();
 
     
     switch (t_move.flag()){
     case quiet:
-        movedPiece = searchMoved(moveMask);
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[movedPiece] ^= moveMask;
+        movePiece(stm, searchMoved(to), from, to);
         break;
     case doublePush:
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[pawn] ^= moveMask;
+        movePiece(stm, pawn, from, to);
         break;
     case kingCastle:
-        static constexpr uint64_t kingCastleMask[2] = {uint64_t(0x00000000000000a0), uint64_t(0xa000000000000000)};
-        m_bitboard[sideToMove] ^= kingCastleMask[sideToMove] | moveMask;
-        m_bitboard[king] ^= moveMask;
-        m_bitboard[rook] ^= kingCastleMask[sideToMove];
+        static constexpr int KCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
+        movePiece(stm, king, from, to);
+        movePiece(stm, rook, h1 + KCoffset[stm], f1 + KCoffset[stm]); 
         break;
     case queenCastle:
-        static constexpr uint64_t queenCastleMask[2] = {uint64_t(0x0000000000000009), uint64_t(0x0900000000000000)};
-        m_bitboard[sideToMove] ^= queenCastleMask[sideToMove] | moveMask;
-        m_bitboard[king] ^= moveMask;
-        m_bitboard[rook] ^= queenCastleMask[sideToMove];
+        static constexpr int QCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
+        movePiece(stm, king, from, to);
+        movePiece(stm, rook, a1 + QCoffset[stm], d1 + QCoffset[stm]); 
         break;
     case capture:
-        movedPiece = searchMoved(moveMask);
-        capturedPiece = getCaptured();
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[movedPiece] ^= moveMask;
-        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
-        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
-        increaseMaterialCount(capturedPiece);
+        movePiece(stm, searchMoved(to), from, to);
+        capturePiece(stm, getCaptured(), to);
+        increaseMaterialCount(getCaptured());
         break;
     case enPassant:
-        static constexpr int offset[2] = {-8, 8};
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[pawn] ^= moveMask;
-        m_bitboard[1-sideToMove] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
-        m_bitboard[pawn] ^= uint64_t(1) << (t_move.endSquare() + offset[sideToMove]);
+        static constexpr int EPoffset[2] = {-8, 8}; //adds one rank offset depending on capturing side
+        movePiece(stm, pawn, from, to);
+        capturePiece(stm, pawn, to + EPoffset[stm]);
         increaseMaterialCount(pawn);
         break;
     case knightPromoCapture:
     case bishopPromoCapture:
     case rookPromoCapture:
     case queenPromoCapture:
-        capturedPiece = getCaptured();
-        m_bitboard[1 - sideToMove] ^= uint64_t(1) << t_move.endSquare();
-        m_bitboard[capturedPiece]  ^= uint64_t(1) << t_move.endSquare();
-        increaseMaterialCount(capturedPiece);
+        capturePiece(stm, getCaptured(), to);
+        increaseMaterialCount(getCaptured());
         [[fallthrough]];
     case knightPromo:
     case bishopPromo:
     case rookPromo:
     case queenPromo:
-        m_bitboard[sideToMove] ^= moveMask;
-        m_bitboard[pawn] ^= uint64_t(1) << t_move.startingSquare();
-        m_bitboard[t_move.promoPiece()] ^= uint64_t(1) << t_move.endSquare();
+        promotePiece(stm, t_move.promoPiece(), from, to);
         increaseMaterialCount(pawn);
         decreaseMaterialCount(t_move.promoPiece());
-        resetHMC();
         break;
     }
 
     m_stateHist.pop_back();
+
+    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
+    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
 }
 
-int Board::searchMoved(const uint64_t &t_moveMask) const
+int Board::searchMoved(const int &from) const
 {
+    uint64_t mask = 1ULL << from;
+    int stm = getSideToMove();
     for (int piece = pawn; piece <= king; piece ++) 
-        if (m_bitboard[piece] & m_bitboard[getSideToMove()] & t_moveMask) return piece;
+        if (m_bitboard[piece] & m_bitboard[stm] & mask) return piece;
     throw std::runtime_error("moved piece not found");
 }
 
-int Board::searchCaptured(const uint64_t &t_moveMask) const
+int Board::searchCaptured(const int &to) const
 {
+    uint64_t mask = 1ULL << to;
+    int stm = getSideToMove();
     for (int piece = queen; piece >= pawn; piece--) 
-        if (m_bitboard[piece] & m_bitboard[1 - getSideToMove()] & t_moveMask) return piece;
+        if (m_bitboard[piece] & m_bitboard[1-stm] & mask) return piece;
     throw std::runtime_error("moved piece not found");
 }
 
+void Board::movePiece(int stm, int piece, int from, int to) {
+    m_bitboard[piece] ^= 1ULL << from | 1ULL << to;
+    m_bitboard[stm]   ^= 1ULL << from | 1ULL << to;
+    m_zobristKey ^= m_zobrist.getPieceKey(stm, piece, from);
+    m_zobristKey ^= m_zobrist.getPieceKey(stm, piece, to);
+}
+
+void Board::capturePiece(int stm, int piece, int sq)
+{
+    m_bitboard[piece] ^= 1ULL << sq;
+    m_bitboard[1-stm] ^= 1ULL << sq;
+    m_zobristKey ^= m_zobrist.getPieceKey(1-stm, piece, sq);
+    resetHMC();
+}
+
+void Board::promotePiece(int stm, int piece, int from, int to)
+{
+    m_bitboard[pawn]  ^= 1ULL << from;
+    m_bitboard[piece] ^= 1ULL << to;
+    m_bitboard[stm]   ^= 1ULL << from | 1ULL << to;
+    m_zobristKey ^= m_zobrist.getPieceKey(stm, pawn, from);
+    m_zobristKey ^= m_zobrist.getPieceKey(stm, piece, to);
+    resetHMC();
+}
