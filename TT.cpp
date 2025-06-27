@@ -6,6 +6,7 @@ TT::TT(int sizeMB)
 {
     m_tableSize = sizeMB * 1024 * 1024 / sizeof(Entry);
     m_table = new Entry[m_tableSize];
+    std::fill(m_table, m_table + m_tableSize, Entry{});
 }
 
 TT::~TT()
@@ -25,6 +26,7 @@ void TT::resize(int sizeMB)
     m_tableSize = sizeMB * 1024 * 1024 / sizeof(Entry);
     delete[] m_table;
     m_table = new Entry[m_tableSize];
+    std::cout << "Successfully allocated " << sizeMB << "MB \t" << m_tableSize << " objects" << std::endl;
 }
 
 int16_t TT::getScore(const Board &t_key) const

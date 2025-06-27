@@ -7,6 +7,11 @@ uint64_t Debugger::getPerft(int t_depth)
 {
     uint64_t nodes = 0;
 
+    uint64_t key = m_board.getHash();
+    size_t index = key % m_size;
+    if (m_hash[index].first == key) assert(m_board == m_hash[index].second);
+    m_hash[index] = {key, m_board};
+
     if (t_depth == 0) 
         return 1ULL;
     auto moveList = m_generator.generateMoves(m_board);

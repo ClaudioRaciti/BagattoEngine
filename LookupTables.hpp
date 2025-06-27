@@ -31,7 +31,7 @@ public:
 
 private:
     LookupTables();
-    ~LookupTables() = default;
+    ~LookupTables() {delete m_instance; m_instance = nullptr;}
 
     void initRayAttacks();
     void initKnightAttacks();

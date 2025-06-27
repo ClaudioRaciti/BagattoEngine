@@ -23,7 +23,7 @@ public:
 private:
 
     Zobrist();
-    ~Zobrist() = default;
+    ~Zobrist() {delete m_instance; m_instance = nullptr;}
 
     void initPieces();
     void initCastle();

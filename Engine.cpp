@@ -19,6 +19,7 @@ void Engine::setPos(std::string t_position)
     stopSearch();
     const std::lock_guard guard(m_engine_mutex);
     m_board = Board(t_position);
+    m_gameHist.emplace_back(m_board.getHash());
 }
 
 void Engine::makeMove(std::string t_move)
@@ -28,6 +29,7 @@ void Engine::makeMove(std::string t_move)
     std::vector<Move> moveList = m_generator.generateMoves(m_board);
     for (auto move : moveList) if (t_move == move.asString()){
         m_board.makeMove(move);
+        m_gameHist.emplace_back(m_board.getHash());
         return;
     }
     throw std::invalid_argument("invalid move");
@@ -55,7 +57,7 @@ void Engine::mainSearch(int t_maxDepth)
     std::vector<Move> PV;
     Move bestmove;
 
-    m_killers.reserve(t_maxDepth);
+    m_killers.resize(t_maxDepth);
 
     for(int depth = 0; depth <= t_maxDepth && m_gosearch.load(); depth ++){
         int lowFails = 0, highFails = 0;
@@ -108,7 +110,8 @@ void Engine::printSearchInfo(int t_maxDepth, int64_t t_elapsedTime, int16_t eval
 
 int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vector<Move> &t_PV){
     if (m_gosearch.load() == false) return 0;
-    if (t_depth == 0) return quiescence(t_alpha, t_beta);
+    if (t_depth == 0) return quiescence(t_alpha, t_beta);   
+    if (drawCondition()) return 0;
 
     m_searchedNodes +=1;
 
@@ -142,6 +145,7 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
 
     for(auto move : moveList){
         m_board.makeMove(move);
+        m_gameHist.emplace_back(m_board.getHash());
         if (!isIllegal()){
             int16_t score;
             if (bestNodeType == pvNode){
@@ -166,12 +170,13 @@ int16_t Engine::alphaBeta(int t_depth, int16_t t_alpha, int16_t t_beta, std::vec
             }
         }
         m_board.undoMove(move);
+        m_gameHist.pop_back();
 
         if (t_alpha >= t_beta){
             if (m_gosearch.load()) m_TT.insert(m_board, bestScore, t_depth, cutNode, bestMove);
-            if (!move.isCapture() && m_killers[t_depth][0] != move){
-                m_killers[t_depth][1] = m_killers[t_depth][0];
-                m_killers[t_depth][0] = move;
+            if (!move.isCapture() && m_killers[t_depth-1][0] != move){
+                m_killers[t_depth-1][1] = m_killers[t_depth-1][0];
+                m_killers[t_depth-1][0] = move;
             }
             return bestScore;
         }
@@ -239,30 +244,30 @@ int Engine::gamePhase()
 {
     constexpr int mgMax = 100 * 16 + 300 * 8 + 500 * 4 + 1000 * 2;
 
-    int material = (mgMax < m_board.getMaterialCount()) ? mgMax : m_board.getMaterialCount();
+    const int material = (mgMax < m_board.getMaterialCount()) ? mgMax : m_board.getMaterialCount();
 
     return (100 * material) / mgMax;
 }
 
 bool Engine::isIllegal()
 {
-    int sideToMove = m_board.getSideToMove();
-    int kingSquare = m_board.getKingSquare(1 - sideToMove);
-    return m_generator.isSquareAttacked(m_board, kingSquare, sideToMove);
+    const int stm = m_board.getSideToMove();
+    const int kingSquare = m_board.getKingSquare(1 - stm);
+    return m_generator.isSquareAttacked(m_board, kingSquare, stm);
 }
 
 bool Engine::isCheck()
 {
-    int sideToMove = m_board.getSideToMove();
-    int kingSquare = m_board.getKingSquare(sideToMove);
-    return m_generator.isSquareAttacked(m_board, kingSquare, 1 - sideToMove);
+    const int stm = m_board.getSideToMove();
+    const int kingSquare = m_board.getKingSquare(stm);
+    return m_generator.isSquareAttacked(m_board, kingSquare, 1 - stm);
 }
 
 bool Engine::promoThreat()
 {
     static constexpr uint64_t seventhRank[2] = {uint64_t(0x00ff000000000000), uint64_t(0x000000000000ff00)};
-    int sideToMove = m_board.getSideToMove();
-    return m_board.getBitboard(pawn) & m_board.getBitboard(sideToMove) & seventhRank[sideToMove];
+    const int stm = m_board.getSideToMove();
+    return m_board.getBitboard(pawn) & m_board.getBitboard(stm) & seventhRank[stm];
 }
 
 bool Engine::hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta)
@@ -270,6 +275,24 @@ bool Engine::hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, in
     return hashNodeType == pvNode
         || (hashNodeType == allNode && hashScore <= t_alpha)
         || (hashNodeType == cutNode && hashScore >= t_beta );
+}
+
+bool Engine::drawCondition()
+{
+    int repetition = 1;
+    const int revPlies = m_board.getHMC(); // number of plies with reversible moves
+    const int histSize = m_gameHist.size(); // lenght of current game
+    const int maxPlies = std::min(histSize, revPlies);
+
+    if (revPlies >= 100) return true; // 50 move rule
+    if (maxPlies < 8) return false; // not enough reversible moves for threefold rep 
+    for (int ply = 2; ply <= maxPlies; ply += 2){ // checks every even spaced key for repetition (excluding the second last)
+        if(m_gameHist[(histSize - 1) - ply] ==  m_gameHist.back()) {
+            repetition += 1;
+            if(repetition == 3) return true;
+        }
+    }
+    return false;
 }
 
 void Engine::orderMoves(int t_depth, std::vector<Move> &t_moveList)
@@ -286,5 +309,5 @@ void Engine::orderMoves(int t_depth, std::vector<Move> &t_moveList)
 
     // Quiet move generation and sorting by killer moves first
     m_generator.generateQuiets(m_board, t_moveList);
-    std::partition(it, t_moveList.end(), [&](const Move& m){return m == m_killers[t_depth][0] || m == m_killers[t_depth][1];});
+    std::partition(it, t_moveList.end(), [&](const Move& m){return m == m_killers[t_depth-1][0] || m == m_killers[t_depth-1][1];});
 }

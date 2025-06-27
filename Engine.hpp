@@ -17,6 +17,7 @@ class Engine
 private:
     const MoveGenerator m_generator;
     std::vector<std::array<Move, 2>> m_killers;
+    std::vector<uint64_t> m_gameHist;
     TT m_TT;
     Board m_board;
     uint64_t m_searchedNodes;
@@ -26,7 +27,7 @@ private:
     std::thread m_thread;
     std::mutex m_engine_mutex;
 public:
-    Engine(): m_TT{128}, m_board{Board(STARTPOS)} {}
+    Engine(): m_TT{1}, m_board{Board(STARTPOS)} {}
     ~Engine() {stopSearch();}
     void resizeTT(int sizeMB);
     void setPos(std::string t_position);
@@ -45,5 +46,6 @@ private:
     bool isCheck();   // opponent side gives check and its your turn
     bool promoThreat();
     bool hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta);
+    bool drawCondition();
     void orderMoves(int t_depth, std::vector<Move>& t_moveList);
 };

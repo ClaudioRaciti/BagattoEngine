@@ -7,7 +7,7 @@ class TTValue
 private:
     uint32_t m_data; 
 public:
-    TTValue() : m_data{uint32_t(0)} {}
+    TTValue() : m_data{0U} {}
     TTValue(int16_t t_score, int t_depth, int t_nodeType) : 
         m_data{uint32_t(t_score & 0xffff) | uint32_t((t_depth & 0xff) << 16) | uint32_t((t_nodeType & 0xf) << 24)} {}
     ~TTValue() = default;
