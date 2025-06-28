@@ -15,7 +15,12 @@ public:
 
     static const Zobrist& getInstance();
 
-    inline uint64_t getPieceKey(int sideToMove, int piece, int square) const {return m_pieceKey[getIndex(sideToMove, piece, square)];}
+    static constexpr int PIECE_OFFSET[7] = {0, 0, 64, 128, 192, 256, 320};
+    static constexpr int SIDE_OFFSET[2] = { 0, 384 };
+    inline uint64_t getPieceKey(int stm, int piece, int square) const {
+        return m_pieceKey[SIDE_OFFSET[stm] + PIECE_OFFSET[piece] + square];
+    }
+    
     inline uint64_t getCastleKey(int castleFlag) const {return m_castleKey[castleFlag];}
     inline uint64_t getEPKey(int EPFile) const {return m_EPKey[EPFile];}
     inline uint64_t getSTMKey() const {return m_STMKey;}
