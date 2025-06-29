@@ -17,18 +17,18 @@ public:
     bool operator==(const Board&) const;
     bool operator!=(const Board&) const;
     
-    inline __attribute__((always_inline)) uint64_t getBitboard(int t_piece) const {return m_bitboard[t_piece];}   
+    inline uint64_t getBitboard(int t_piece) const {return m_bitboard[t_piece];}   
 
 
-    inline int  getSideToMove() const               {return m_state & 0x1;}
-    inline int  getCastles() const                  {return (m_state >> 1) & 0xf;}
-    inline bool getShortCastle (int t_side) const   {return (m_state >> (t_side + 1)) & 0x1;}
-    inline bool getLongCastle (int t_side) const    {return (m_state >> (t_side + 3)) & 0x1;}
-    inline bool getEpState() const                  {return (m_state >> 5) & 0x01;}
-    inline int  getEpSquare() const                 {return ((m_state >> 6) & 0xf) + 24;}
-    inline int  getCaptured() const                 {return (m_state >> 10) & 0x7;}
-    inline int  getKingSquare (int t_side) const    {return (m_state >> (13 + 6 * t_side)) & 0x3f;}
-    inline int  getHMC() const                      {return (m_state >> 25) & 0x7f;} 
+    inline int  getSideToMove() const               {return m_stateHist.back() & 0x1;}
+    inline int  getCastles() const                  {return (m_stateHist.back() >> 1) & 0xf;}
+    inline bool getShortCastle (int t_side) const   {return (m_stateHist.back() >> (t_side + 1)) & 0x1;}
+    inline bool getLongCastle (int t_side) const    {return (m_stateHist.back() >> (t_side + 3)) & 0x1;}
+    inline bool getEpState() const                  {return (m_stateHist.back() >> 5) & 0x01;}
+    inline int  getEpSquare() const                 {return ((m_stateHist.back() >> 6) & 0xf) + 24;}
+    inline int  getCaptured() const                 {return (m_stateHist.back() >> 10) & 0x7;}
+    inline int  getKingSquare (int t_side) const    {return (m_stateHist.back() >> (13 + 6 * t_side)) & 0x3f;}
+    inline int  getHMC() const                      {return (m_stateHist.back() >> 25) & 0x7f;} 
 
     inline int getMaterialCount() const {return m_materialCount;}
 
@@ -37,8 +37,8 @@ public:
     void makeMove(const Move &t_move);
     void undoMove(const Move &t_move);
 
-    int searchMoved(const int &t_moveMask) const;
-    int searchCaptured(const int &t_moveMask) const;
+    int searchMoved(int t_square) const;
+    int searchCaptured(int t_square) const;
 
 private:
     
@@ -46,17 +46,17 @@ private:
     void capturePiece(int stm, int piece, int sq);
     void promotePiece(int stm, int piece, int from, int to);
 
-    inline void toggleSideToMove()              {m_state ^= 0x01; m_zobristKey ^= m_zobrist.getSTMKey();}
-    inline void removeShortCastle (int t_side)  {m_state &= ~(0x1 << (t_side + 1));}
-    inline void removeLongCastle (int t_side)   {m_state &= ~(0x1 << (t_side + 3));}
-    inline void setEpSquare (int t_square )     {m_state |= (1 << 5) | ((t_square - 24)  << 6);}
-    inline void setCaptured (int t_piece)       {m_state |= t_piece << 10;}
+    inline void toggleSideToMove()              {m_stateHist.back() ^= 0x01; m_zobristKey ^= m_zobrist.getSTMKey();}
+    inline void removeShortCastle (int t_side)  {m_stateHist.back() &= ~(0x1 << (t_side + 1));}
+    inline void removeLongCastle (int t_side)   {m_stateHist.back() &= ~(0x1 << (t_side + 3));}
+    inline void setEpSquare (int t_square )     {m_stateHist.back() |= (1 << 5) | ((t_square - 24)  << 6);}
+    inline void setCaptured (int t_piece)       {m_stateHist.back() |= t_piece << 10;}
     inline void setKingSquare (int t_side, int t_square) {
-                                                m_state &= ~(0x3f << (13 + 6 * t_side));
-                                                m_state |= t_square  << (13 + 6 * t_side);
+                                                m_stateHist.back() &= ~(0x3f << (13 + 6 * t_side));
+                                                m_stateHist.back() |= t_square  << (13 + 6 * t_side);
                                             }
-    inline void incrementHMC()                  {m_state += 0x1 << 25;}
-    inline void resetHMC()                      {m_state &= ~(0x7f << 25);}
+    inline void incrementHMC()                  {m_stateHist.back() += 0x1 << 25;}
+    inline void resetHMC()                      {m_stateHist.back() &= ~(0x7f << 25);}
     
     inline size_t getIndex(int sideToMove, int piece, int square) const {return 384 * sideToMove + 64 * (piece - pawn) + square;}
 
@@ -73,7 +73,6 @@ private:
 private:
     std::array<uint64_t, 8> m_bitboard;
     std::vector<uint32_t> m_stateHist;
-    uint32_t m_state;
     uint64_t m_zobristKey = 0ULL;
     int m_materialCount;
 

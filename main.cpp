@@ -1,4 +1,5 @@
 #include "Engine.hpp"
+#include "Debugger.hpp"
 #include <sstream>
 #include <iostream>
 #include <vector>
@@ -19,7 +20,7 @@ int main(){
             std::cout << "readyok" << std::endl;
         }
         else if (input == "ucinewgame"){
-            engine.setPos(STARTPOS);
+            engine.setPos(KIWIPETE);
         }
         else if (input.rfind("setoption", 0) == 0){
             std::istringstream iss(input);
@@ -68,8 +69,8 @@ int main(){
             }
         }
         else if (input.rfind("go", 0) == 0) {
-            engine.goSearch(100);
-            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+            engine.goSearch(7);
+            std::this_thread::sleep_for(std::chrono::milliseconds(4000));
             engine.stopSearch();
         }
         else if (input == "stop"){

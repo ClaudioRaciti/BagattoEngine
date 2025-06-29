@@ -9,7 +9,12 @@ uint64_t Debugger::getPerft(int t_depth)
 
     if (t_depth == 0) 
         return 1ULL;
-    auto moveList = m_generator.generateMoves(m_board);
+
+    std::vector<Move> moveList;
+    moveList.reserve(256);
+    if(isCheck()) m_generator.evadeChecks(m_board, moveList);
+    else m_generator.generateMoves(m_board, moveList);
+
     for (auto move : moveList) {
         m_board.makeMove(move);
         if(!isInCheck()){

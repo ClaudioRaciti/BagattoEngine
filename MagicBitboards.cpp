@@ -1,31 +1,31 @@
-#include "LookupTables.hpp"
+#include "MagicBitboards.hpp"
 #include "utils.hpp"
 #include "notation.hpp"
 
-LookupTables* LookupTables::m_instance = nullptr;
+MagicBitboards* MagicBitboards::m_instance = nullptr;
 
-const LookupTables &LookupTables::getInstance()
+const MagicBitboards &MagicBitboards::getInstance()
 {
-    if (m_instance == nullptr) m_instance = new LookupTables();
+    if (m_instance == nullptr) m_instance = new MagicBitboards();
     return *m_instance;
 }
 
-// uint64_t LookupTables::getAttacks(int t_piece, int t_square, uint64_t t_occupied) const
+// uint64_t MagicBitboards::getAttacks(int t_piece, int t_square, uint64_t t_occupied) const
 // {
-//     using AttackFunction = uint64_t (LookupTables::*)(uint64_t, int) const;
+//     using AttackFunction = uint64_t (MagicBitboards::*)(uint64_t, int) const;
 
 //     static const AttackFunction attackFunction[] = {
-//         &LookupTables::knightAttacks, // knight
-//         &LookupTables::bishopAttacks, // bishops
-//         &LookupTables::rookAttacks,   // rooks
-//         &LookupTables::queenAttacks,  // queens
-//         &LookupTables::kingAttacks    // kings
+//         &MagicBitboards::knightAttacks, // knight
+//         &MagicBitboards::bishopAttacks, // bishops
+//         &MagicBitboards::rookAttacks,   // rooks
+//         &MagicBitboards::queenAttacks,  // queens
+//         &MagicBitboards::kingAttacks    // kings
 //     };
     
 //     return (m_instance->*attackFunction[t_piece - 3])(t_occupied, t_square);
 // }
 
-LookupTables::LookupTables() :
+MagicBitboards::MagicBitboards() :
    m_rShift {
         52, 53, 53, 53, 53, 53, 53, 52,
         53, 54, 54, 54, 54, 54, 54, 53,
@@ -126,7 +126,7 @@ LookupTables::LookupTables() :
     initMagicMoves();
 }
 
-void LookupTables::initRayAttacks()
+void MagicBitboards::initRayAttacks()
 {
     uint64_t nortRay =  (uint64_t) 0x0101010101010100;
     for (int sq = 0; sq < 64; sq ++, nortRay <<= 1)
@@ -180,7 +180,7 @@ void LookupTables::initRayAttacks()
     }
 }
 
-void LookupTables::initKnightAttacks()
+void MagicBitboards::initKnightAttacks()
 {
     uint64_t knightPos = (uint64_t) 1;
     for (int sq = 0; sq < 64; sq ++, knightPos <<= 1){
@@ -198,7 +198,7 @@ void LookupTables::initKnightAttacks()
     }
 }
 
-void LookupTables::initKingAttacks()
+void MagicBitboards::initKingAttacks()
 {
     uint64_t kingPosition = (uint64_t) 1;
     for (int sq = 0; sq < 64; sq ++, kingPosition <<= 1){
@@ -210,7 +210,7 @@ void LookupTables::initKingAttacks()
     }
 }
 
-void LookupTables::initPawnAttacks()
+void MagicBitboards::initPawnAttacks()
 {
     uint64_t pawnPosition = (uint64_t) 1;
     for (int sq = 0; sq < 64; sq ++ , pawnPosition <<= 1){
@@ -222,7 +222,7 @@ void LookupTables::initPawnAttacks()
     }    
 }
 
-void LookupTables::initMagicMoves()
+void MagicBitboards::initMagicMoves()
 {
     for (int i = 0; i < 64; i++){
         int squares[64];
@@ -260,7 +260,7 @@ void LookupTables::initMagicMoves()
     }
 }
 
-uint64_t LookupTables::initMagicOcc(int *squares, int nSquares, uint64_t sequence)
+uint64_t MagicBitboards::initMagicOcc(int *squares, int nSquares, uint64_t sequence)
 {
     uint64_t returnVal = 0;
     for (int i = 0; i < nSquares; i ++)
@@ -268,7 +268,7 @@ uint64_t LookupTables::initMagicOcc(int *squares, int nSquares, uint64_t sequenc
     return returnVal;
 }
 
-uint64_t LookupTables::initMagicBMoves(int t_square, uint64_t t_occupied)
+uint64_t MagicBitboards::initMagicBMoves(int t_square, uint64_t t_occupied)
 {
     uint64_t ret=0;
 	uint64_t bit;
@@ -314,7 +314,7 @@ uint64_t LookupTables::initMagicBMoves(int t_square, uint64_t t_occupied)
 	return ret;
 }
 
-uint64_t LookupTables::initMagicRMoves(int t_square, uint64_t t_occupied)
+uint64_t MagicBitboards::initMagicRMoves(int t_square, uint64_t t_occupied)
 {
     uint64_t ret=0;
 	uint64_t bit;

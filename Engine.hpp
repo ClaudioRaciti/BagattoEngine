@@ -10,7 +10,6 @@
 #include "Move.hpp"
 #include "MoveGenerator.hpp"
 #include "TT.hpp"
-#include "LookupTables.hpp"
 
 class Engine
 {
@@ -33,11 +32,9 @@ public:
     void setPos(std::string t_position);
     void makeMove(std::string t_move);
     void goSearch(int t_depth);
-    void stopSearch();
-
-    void mainSearch(int t_depth);
-    
+    void stopSearch();    
 private:
+    void mainSearch(int t_depth);
     void printSearchInfo(int t_maxDepth, int64_t t_elapsedTime, int16_t eval, std::vector<Move> &t_PV);
     int16_t alphaBeta(int t_depth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV);
     int16_t quiescence(int16_t t_alpha, int16_t t_beta);
@@ -47,5 +44,4 @@ private:
     bool promoThreat();
     bool hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta);
     bool drawCondition();
-    void orderMoves(int t_depth, std::vector<Move>& t_moveList);
 };

@@ -2,13 +2,13 @@
 
 #include <cstdint>
 
-class LookupTables{
+class MagicBitboards{
 public:
     // Deleted methods for singleton pattern
-    LookupTables(const LookupTables&)               = delete;
-    LookupTables& operator=(const LookupTables&)    = delete;
+    MagicBitboards(const MagicBitboards&)               = delete;
+    MagicBitboards& operator=(const MagicBitboards&)    = delete;
 
-    static const LookupTables& getInstance();
+    static const MagicBitboards& getInstance();
 
     constexpr uint64_t rayAttacks   (int t_square, int t_direction)     const {return m_rayAttacks[t_square][t_direction];}
     constexpr uint64_t knightAttacks(int t_square) const {return m_knightAttacks[t_square];}
@@ -30,8 +30,8 @@ public:
     }
 
 private:
-    LookupTables();
-    ~LookupTables() {delete m_instance; m_instance = nullptr;}
+    MagicBitboards();
+    ~MagicBitboards() {delete m_instance; m_instance = nullptr;}
 
     void initRayAttacks();
     void initKnightAttacks();
@@ -44,7 +44,7 @@ private:
     uint64_t initMagicRMoves(int, uint64_t);
 
 private:
-    static LookupTables *m_instance;
+    static MagicBitboards *m_instance;
 
     uint64_t m_rayAttacks[64][8]; 
     uint64_t m_knightAttacks[64];
