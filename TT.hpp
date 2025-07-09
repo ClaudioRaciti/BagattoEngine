@@ -1,8 +1,6 @@
 #pragma once
 
 #include <array>
-
-#include "Board.hpp"
 #include "TTValue.hpp"
 #include "Move.hpp"
 
@@ -23,19 +21,20 @@ public:
     ~TT();
 
     // Insert a key-value pair (overwriting on collision)
-    void insert(Board &t_key, const int16_t&t_score, const int &t_depth, const int &t_nodeType, const Move &t_hashMove);
+    void insert(uint64_t tKey, int16_t tScore, int tDepth, int tNodeType, Move tHashMove);
     void resize(int sizeMB);
 
     // Retrieve a value by key
-    int16_t getScore(const Board& t_key) const;
-    
-    Move getMove(const Board& t_key) const;
+    inline TTValue getValue(uint64_t tKey) const {return m_table[tKey % m_tableSize].value;}
 
-    int getDepth(const Board& t_key) const;
+    inline int16_t getScore(uint64_t tKey) const{return m_table[tKey % m_tableSize].value.score();}
 
-    int getNodeType(const Board& t_key) const;
+    inline Move getMove(uint64_t tKey) const {return m_table[tKey % m_tableSize].hashMove;}
+
+    inline int getDepth(uint64_t tKey) const {return m_table[tKey % m_tableSize].value.depth();}
+
+    inline int getNodeType(uint64_t tKey) const {return m_table[tKey % m_tableSize].value.nodeType();}
 
     // Check if key has been inserted
-    bool contains(const Board& t_key) const;
-    bool contains(const Board& t_key, int16_t &t_score, int &t_depth, int &t_nodeType, Move &t_hashMove);
+    inline bool contains(uint64_t tKey) const {return m_table[tKey % m_tableSize].key == tKey;}
 };

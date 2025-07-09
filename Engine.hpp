@@ -9,29 +9,30 @@
 #include "Board.hpp"
 #include "Move.hpp"
 #include "MoveGenerator.hpp"
+#include "utils.hpp"
 #include "TT.hpp"
 
 class Engine
 {
 private:
-    const MoveGenerator m_generator;
-    std::vector<std::array<Move, 2>> m_killers;
-    std::vector<uint64_t> m_gameHist;
-    TT m_TT;
-    Board m_board;
-    uint64_t m_searchedNodes;
+    const MoveGenerator mGenerator;
+    std::vector<std::array<Move, 2>> mKillers;
+    std::vector<uint64_t> mGameHist;
+    TT mTT;
+    Board mBoard;
+    uint64_t mSearchedNodes;
+    SearchLimits mLimits;
 
-
-    std::atomic<bool> m_gosearch = false;
-    std::thread m_thread;
-    std::mutex m_engine_mutex;
+    std::atomic<bool> mGoSearch = false;
+    std::thread mThread;
+    std::mutex mEngineMutex;
 public:
-    Engine(): m_TT{1}, m_board{Board(STARTPOS)} {}
+    Engine(): mTT{1}, mBoard{Board(STARTPOS)} {}
     ~Engine() {stopSearch();}
     void resizeTT(int sizeMB);
     void setPos(std::string t_position);
     void makeMove(std::string t_move);
-    void goSearch(int t_depth);
+    void goSearch(SearchLimits tLimits);
     void stopSearch();    
 private:
     void mainSearch(int t_depth);
@@ -43,5 +44,8 @@ private:
     bool isCheck();   // opponent side gives check and its your turn
     bool promoThreat();
     bool hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta);
-    bool drawCondition();
+    bool threefoldRepetition();
+    bool fiftyMove();
+    bool exitSearch();
 };
+

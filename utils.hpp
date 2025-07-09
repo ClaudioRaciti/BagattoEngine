@@ -3,6 +3,26 @@
 #include <vector>
 #include <cstdint>
 #include <string>
+#include <chrono>
+
+// Time variables
+using TimePoint = std::chrono::milliseconds::rep;  // A value in milliseconds
+static_assert(sizeof(TimePoint) == sizeof(int64_t), "TimePoint should be 64 bits");
+inline TimePoint now() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+// Search data
+struct SearchLimits
+{
+    bool infinite = false;
+    uint64_t nodes = 0ULL;
+    int depth = 0, movestogo = 0;
+    TimePoint movetime = 0, timestart = 0;
+    TimePoint time[2], inc[2];
+};
 
 // Bit TWiddling functions
 constexpr void wrapNort (uint64_t &bitBoard) {bitBoard <<= 8;}
