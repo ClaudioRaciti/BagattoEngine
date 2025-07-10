@@ -7,29 +7,29 @@
 #include <chrono>
 #include <stdexcept>
 
-void Engine::resizeTT(int sizeMB)
+void Engine::resizeTT(int tMBSize)
 {
     stopSearch();
     const std::lock_guard guard(mEngineMutex);
-    mTT.resize(sizeMB);
+    mTT.resize(tMBSize);
 }
 
-void Engine::setPos(std::string t_position)
+void Engine::setPos(std::string tPosition)
 {
     stopSearch();
     const std::lock_guard guard(mEngineMutex);
-    mBoard = Board(t_position);
+    mBoard = Board(tPosition);
     mGameHist.emplace_back(mBoard.getHash());
 }
 
-void Engine::makeMove(std::string t_move)
+void Engine::makeMove(std::string tMove)
 {
     stopSearch();
     const std::lock_guard guard(mEngineMutex);
     std::vector<Move> moveList;
     moveList.reserve(256);
     mGenerator.generateMoves(mBoard, moveList);
-    for (auto move : moveList) if (t_move == move.asString()){
+    for (auto move : moveList) if (tMove == move.asString()){
         mBoard.makeMove(move);
         mGameHist.emplace_back(mBoard.getHash());
         return;
@@ -52,7 +52,7 @@ void Engine::stopSearch()
     if (mThread.joinable()) mThread.join();
 }
 
-void Engine::mainSearch(int t_maxDepth)
+void Engine::mainSearch(int tMaxDepth)
 {
     const std::lock_guard guard(mEngineMutex);
 
@@ -61,10 +61,10 @@ void Engine::mainSearch(int t_maxDepth)
     std::vector<Move> PV;
     Move bestmove;
 
-    mKillers.resize(t_maxDepth);
-    mGameHist.resize(t_maxDepth);
+    mKillers.resize(tMaxDepth);
+    mGameHist.resize(tMaxDepth);
 
-    for(int depth = 0; depth <= t_maxDepth && !exitSearch(); depth ++){
+    for(int depth = 0; depth <= tMaxDepth && !exitSearch(); depth ++){
         int lowFails = 0, highFails = 0;
 
         do {
@@ -93,21 +93,21 @@ void Engine::mainSearch(int t_maxDepth)
 }
 
 
-void Engine::printSearchInfo(int t_maxDepth, int64_t t_elapsedTime, int16_t eval, std::vector<Move> &t_PV)
+void Engine::printSearchInfo(int tDepth, int64_t tElapsed, int16_t tEval, std::vector<Move> &tPV)
 {
-    double elapsedSec = t_elapsedTime / 1000.0;
+    double elapsedSec = tElapsed / 1000.0;
     uint64_t nps = (elapsedSec > 0) ? static_cast<uint64_t>(mSearchedNodes / elapsedSec) : 0;
     
-    std::cout << "info depth " << t_maxDepth << " nodes " << mSearchedNodes << " time " << t_elapsedTime << " nps " << nps;
+    std::cout << "info depth " << tDepth << " nodes " << mSearchedNodes << " time " << tElapsed << " nps " << nps;
 
     // if(eval <= CHECKMATE) std::cout << " mate " << (t_maxDepth - (CHECKMATE - eval)) / 2 + 1 << " ";
     // else if( eval  >= -CHECKMATE) std::cout << " mate -" << (t_maxDepth - (CHECKMATE + eval)) / 2 + 1 << " ";
     // else
-    std::cout << " score cp " << eval;
+    std::cout << " score cp " << tEval;
     
-    if (t_PV.size()){
+    if (tPV.size()){
         std::cout << " pv ";
-        for (auto move = t_PV.crbegin(); move != t_PV.crend(); move ++) if(move->asString() != "a1a1") std::cout << *move << " ";
+        for (auto move = tPV.crbegin(); move != tPV.crend(); move ++) if(move->asString() != "a1a1") std::cout << *move << " ";
     }
 
     std::cout << std::endl;
@@ -281,7 +281,7 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
     return bestScore;
 }
 
-int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
+int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
 {    
     mSearchedNodes += 1;
 
@@ -297,11 +297,11 @@ int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
     }
     else{
         bestScore = standPat;
-        if(bestScore > t_alpha) {
-            t_alpha = bestScore; 
-            if(t_alpha >= t_beta) return bestScore;
+        if(bestScore > tAlpha) {
+            tAlpha = bestScore; 
+            if(tAlpha >= tBeta) return bestScore;
         }
-        else if(bestScore + (promoThreat() ? 1800 : 1000) < t_alpha) return bestScore;
+        else if(bestScore + (promoThreat() ? 1800 : 1000) < tAlpha) return bestScore;
 
         mGenerator.generateCaptures(mBoard, moveList);
         std::sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
@@ -313,17 +313,17 @@ int16_t Engine::quiescence(int16_t t_alpha, int16_t t_beta)
 
     for (const auto& move : moveList){
         mBoard.makeMove(move);
-            if(!isIllegal() && standPat + pieceVal[mBoard.getCaptured()] + 200 > t_alpha){ 
-            int16_t score = -quiescence(-t_beta, -t_alpha);
+            if(!isIllegal() && standPat + pieceVal[mBoard.getCaptured()] + 200 > tAlpha){ 
+            int16_t score = -quiescence(-tBeta, -tAlpha);
             
             if (score > bestScore) {
                 bestScore = score; 
-                if (bestScore > t_alpha) t_alpha = bestScore;
+                if (bestScore > tAlpha) tAlpha = bestScore;
             }
         }
         mBoard.undoMove(move);
 
-        if(t_alpha >= t_beta) return bestScore;
+        if(tAlpha >= tBeta) return bestScore;
     }
 
     return bestScore;
@@ -359,11 +359,11 @@ bool Engine::promoThreat()
     return mBoard.getBitboard(pawn) & mBoard.getBitboard(stm) & seventhRank[stm];
 }
 
-bool Engine::hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta)
+bool Engine::hashUsageCondition(int tNodeType, int tScore, int tAlpha, int tBeta)
 {
-    return (hashNodeType == pvNode)
-        || (hashNodeType == allNode && hashScore <= t_alpha)
-        || (hashNodeType == cutNode && hashScore >= t_beta );
+    return (tNodeType == pvNode)
+        || (tNodeType == allNode && tScore <= tAlpha)
+        || (tNodeType == cutNode && tScore >= tBeta );
 }
 
 bool Engine::threefoldRepetition()

@@ -7,9 +7,9 @@
 
 class Move{
 public:
-    Move(): m_move{0U}{}
+    Move(): mMove{0U}{}
     Move(const Move &);
-    Move(int t_from, int t_to, int t_flag);
+    Move(int tFrom, int tTo, int tFlag);
 
     void operator= (Move otherObj);
     friend bool operator== (const Move& thisObj, const Move& otherObj);
@@ -18,10 +18,10 @@ public:
 
     std::string asString() const;
 
-    inline int to()  const {return m_move & 0x3f;}
-    inline int from() const {return (m_move >> 6) & 0x3f;}
-    inline int flag()       const {return (m_move >> 12) & 0x0f;}
-    inline int asInt()      const {return m_move;}
+    inline int to()  const {return mMove & 0x3f;}
+    inline int from() const {return (mMove >> 6) & 0x3f;}
+    inline int flag()       const {return (mMove >> 12) & 0x0f;}
+    inline int asInt()      const {return mMove;}
     inline int promoPiece() const {return (flag() & 0x03) + knight;}
 
     inline bool isInit()       const {return asInt();}
@@ -32,5 +32,5 @@ public:
     inline bool isCastle()     const {return (flag() == kingCastle) || (flag() == queenCastle);}
 
 private:
-    uint16_t m_move;
+    uint16_t mMove;
 };

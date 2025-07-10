@@ -4,19 +4,19 @@
 #include <bitset>
 #include <random>
 
-Board::Board(std::string t_FEN):
-    m_zobrist{Zobrist::getInstance()}{
-    std::vector<std::string> dataFields = split(t_FEN, ' ');
+Board::Board(std::string tFEN):
+    mZobrist{Zobrist::getInstance()}{
+    std::vector<std::string> dataFields = split(tFEN, ' ');
     std::string boardField = dataFields[0];
     std::string sideToMove = dataFields[1];
     std::string castleRights = dataFields[2];
     std::string epSquare = dataFields[3];
     std::string halfmoveClock = dataFields.size() < 5 ? "0" : dataFields[4];
 
-    m_stateHist.emplace_back(uint32_t(0x0));
+    mStateHist.emplace_back(uint32_t(0x0));
 
     // Set bitboards to zero
-    for(int i = 0; i < 8; i ++) m_bitboard[i] = 0ULL;
+    for(int i = 0; i < 8; i ++) mBitboards[i] = 0ULL;
 
     // Setup bitboards:
     std::vector<std::string> boardSquares = split(boardField, '/');
@@ -30,149 +30,149 @@ Board::Board(std::string t_FEN):
             else switch (squareContent)
             {
             case 'p': 
-                m_bitboard[pawn]  |= uint64_t(1) << squareNumber; 
-                m_bitboard[black] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(black, pawn, squareNumber);
+                mBitboards[pawn]  |= uint64_t(1) << squareNumber; 
+                mBitboards[black] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(black, pawn, squareNumber);
                 break;
             case 'P': 
-                m_bitboard[pawn]  |= uint64_t(1) << squareNumber; 
-                m_bitboard[white] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(white, pawn, squareNumber);
+                mBitboards[pawn]  |= uint64_t(1) << squareNumber; 
+                mBitboards[white] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(white, pawn, squareNumber);
                 break;
             case 'n': 
-                m_bitboard[knight]|= uint64_t(1) << squareNumber; 
-                m_bitboard[black] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(black, knight, squareNumber);
+                mBitboards[knight]|= uint64_t(1) << squareNumber; 
+                mBitboards[black] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(black, knight, squareNumber);
                 break;
             case 'N': 
-                m_bitboard[knight]|= uint64_t(1) << squareNumber; 
-                m_bitboard[white] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(white, knight, squareNumber);
+                mBitboards[knight]|= uint64_t(1) << squareNumber; 
+                mBitboards[white] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(white, knight, squareNumber);
                 break;
             case 'b': 
-                m_bitboard[bishop]|= uint64_t(1) << squareNumber; 
-                m_bitboard[black] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(black, bishop, squareNumber);
+                mBitboards[bishop]|= uint64_t(1) << squareNumber; 
+                mBitboards[black] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(black, bishop, squareNumber);
                 break;
             case 'B': 
-                m_bitboard[bishop]|= uint64_t(1) << squareNumber; 
-                m_bitboard[white] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(white, bishop, squareNumber);
+                mBitboards[bishop]|= uint64_t(1) << squareNumber; 
+                mBitboards[white] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(white, bishop, squareNumber);
                 break;
             case 'r': 
-                m_bitboard[rook]  |= uint64_t(1) << squareNumber; 
-                m_bitboard[black] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(black, rook, squareNumber);
+                mBitboards[rook]  |= uint64_t(1) << squareNumber; 
+                mBitboards[black] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(black, rook, squareNumber);
                 break;
             case 'R': 
-                m_bitboard[rook]  |= uint64_t(1) << squareNumber; 
-                m_bitboard[white] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(white, rook, squareNumber);
+                mBitboards[rook]  |= uint64_t(1) << squareNumber; 
+                mBitboards[white] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(white, rook, squareNumber);
                 break;
             case 'q': 
-                m_bitboard[queen] |= uint64_t(1) << squareNumber; 
-                m_bitboard[black] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(black, queen, squareNumber);
+                mBitboards[queen] |= uint64_t(1) << squareNumber; 
+                mBitboards[black] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(black, queen, squareNumber);
                 break;
             case 'Q': 
-                m_bitboard[queen] |= uint64_t(1) << squareNumber; 
-                m_bitboard[white] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(white, queen, squareNumber);
+                mBitboards[queen] |= uint64_t(1) << squareNumber; 
+                mBitboards[white] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(white, queen, squareNumber);
                 break;
             case 'k': 
-                m_bitboard[king]  |= uint64_t(1) << squareNumber; 
-                m_bitboard[black] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(black, king, squareNumber);
+                mBitboards[king]  |= uint64_t(1) << squareNumber; 
+                mBitboards[black] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(black, king, squareNumber);
                 break;
             case 'K': 
-                m_bitboard[king]  |= uint64_t(1) << squareNumber; 
-                m_bitboard[white] |= uint64_t(1) << squareNumber; 
-                m_zobristKey ^= m_zobrist.getPieceKey(white, king, squareNumber);
+                mBitboards[king]  |= uint64_t(1) << squareNumber; 
+                mBitboards[white] |= uint64_t(1) << squareNumber; 
+                mKey ^= mZobrist.getPieceKey(white, king, squareNumber);
                 break;
             }
         }
     }
 
-    setKingSquare(white, bitScanForward(m_bitboard[king] & m_bitboard[white]));
-    setKingSquare(black, bitScanForward(m_bitboard[king] & m_bitboard[black]));
+    setKingSquare(white, bitScanForward(mBitboards[king] & mBitboards[white]));
+    setKingSquare(black, bitScanForward(mBitboards[king] & mBitboards[black]));
 
     // Set side to move
     if (tolower(sideToMove[0]) != 'w') {
         toggleSideToMove();
-        m_zobristKey ^= m_zobrist.getSTMKey();
+        mKey ^= mZobrist.getSTMKey();
     }
 
     // Set castling rights
     for (char character : castleRights) switch (character)
     {
-    case 'k': m_stateHist.back() |= uint32_t(1) << 2; break;
-    case 'q': m_stateHist.back() |= uint32_t(1) << 4; break;
-    case 'K': m_stateHist.back() |= uint32_t(1) << 1; break;
-    case 'Q': m_stateHist.back() |= uint32_t(1) << 3; break;
+    case 'k': mStateHist.back() |= uint32_t(1) << 2; break;
+    case 'q': mStateHist.back() |= uint32_t(1) << 4; break;
+    case 'K': mStateHist.back() |= uint32_t(1) << 1; break;
+    case 'Q': mStateHist.back() |= uint32_t(1) << 3; break;
     }
-    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
+    mKey ^= mZobrist.getCastleKey(getCastles());
 
     // Set ep square
     if (epSquare.compare("-") != 0) {
         setEpSquare(atoi(epSquare.c_str()));
-        m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8); 
+        mKey ^= mZobrist.getEPKey(getEpSquare()%8); 
     }
 
     // Set HMC
     for (int i = 0; i < atoi(halfmoveClock.c_str()); i ++) incrementHMC();
 
     // Set material count
-    m_materialCount = 0;
+    mMaterialCount = 0;
     static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
-    for (int piece = pawn; piece < king; piece ++) m_materialCount += popCount(m_bitboard[piece]) * pieceVal[piece];
+    for (int piece = pawn; piece < king; piece ++) mMaterialCount += popCount(mBitboards[piece]) * pieceVal[piece];
 }
 
-Board::Board(const Board &t_other) : 
-    m_bitboard{t_other.m_bitboard}, 
-    m_zobristKey(t_other.m_zobristKey) ,
-    m_materialCount{t_other.m_materialCount},
-    m_zobrist{Zobrist::getInstance()}
+Board::Board(const Board &tOther) : 
+    mBitboards{tOther.mBitboards}, 
+    mKey(tOther.mKey) ,
+    mMaterialCount{tOther.mMaterialCount},
+    mZobrist{Zobrist::getInstance()}
 {
-    if(t_other.m_stateHist.size())m_stateHist.emplace_back(t_other.m_stateHist.back());
+    if(tOther.mStateHist.size())mStateHist.emplace_back(tOther.mStateHist.back());
 }
 
-Board &Board::operator=(const Board &t_other)
+Board &Board::operator=(const Board &tOther)
 {
-    if(this != &t_other){
-        m_bitboard = t_other.m_bitboard;
-        m_materialCount = t_other.m_materialCount;
-        m_zobristKey = t_other.m_zobristKey;
-        if(t_other.m_stateHist.size())m_stateHist.emplace_back(t_other.m_stateHist.back());
+    if(this != &tOther){
+        mBitboards = tOther.mBitboards;
+        mMaterialCount = tOther.mMaterialCount;
+        mKey = tOther.mKey;
+        if(tOther.mStateHist.size())mStateHist.emplace_back(tOther.mStateHist.back());
     }
     return *this;
 }
 
 
-bool Board::operator==(const Board &t_other) const
+bool Board::operator==(const Board &tOther) const
 {
     static constexpr uint32_t mask = uint32_t(0x7f) << 25 | uint32_t(0x7) << 10;
-    return (m_bitboard == t_other.m_bitboard) && ((m_stateHist.back() & ~mask) == (t_other.m_stateHist.back() & ~mask));
+    return (mBitboards == tOther.mBitboards) && ((mStateHist.back() & ~mask) == (tOther.mStateHist.back() & ~mask));
 }
 
-bool Board::operator!=(const Board &t_other) const
+bool Board::operator!=(const Board &tOther) const
 {
     static constexpr uint32_t mask = uint32_t(0x7f) << 25 | uint32_t(0x7) << 10;
-    return (m_bitboard != t_other.m_bitboard) || ((m_stateHist.back() & ~mask) != (t_other.m_stateHist.back() & ~mask));
+    return (mBitboards != tOther.mBitboards) || ((mStateHist.back() & ~mask) != (tOther.mStateHist.back() & ~mask));
 }
 
 uint64_t Board::getHash() const
 {
-    return m_zobristKey;
+    return mKey;
 }
 
-void Board::makeMove(const Move &t_move)
+void Board::makeMove(const Move &tMove)
 {
-    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
-    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
+    mKey ^= mZobrist.getCastleKey(getCastles());
+    if (getEpState()) mKey ^= mZobrist.getEPKey(getEpSquare()%8);
 
     int piece, captured;
-    int from = t_move.from();
-    int to = t_move.to();
+    int from = tMove.from();
+    int to = tMove.to();
     int stm = getSideToMove();
 
     // ALWAYS removes en-passant and en-passant square
@@ -187,11 +187,11 @@ void Board::makeMove(const Move &t_move)
         0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe01f,
         0xffffe00f, 0xffffe01f, 0xffffe01f, 0xffffe01f, 0xffffe00b, 0xffffe01f, 0xffffe01f, 0xffffe01b
     };
-    m_stateHist.emplace_back(m_stateHist.back());
-    m_stateHist.back() &= stateMask[from] & stateMask[to];
+    mStateHist.emplace_back(mStateHist.back());
+    mStateHist.back() &= stateMask[from] & stateMask[to];
     incrementHMC();
 
-    switch (t_move.flag()){
+    switch (tMove.flag()){
     case quiet:
         piece = searchMoved(from);
         movePiece(stm, piece, from, to);    
@@ -221,7 +221,7 @@ void Board::makeMove(const Move &t_move)
         movePiece(stm, piece, from, to);
         capturePiece(stm, captured, to);
 
-        if (piece == king) setKingSquare(stm, t_move.to());
+        if (piece == king) setKingSquare(stm, tMove.to());
         decreaseMaterialCount(captured);
         setCaptured(captured);
         resetHMC();
@@ -247,31 +247,31 @@ void Board::makeMove(const Move &t_move)
     case bishopPromo:
     case rookPromo:
     case queenPromo:
-        promotePiece(stm, t_move.promoPiece(), from, to);
+        promotePiece(stm, tMove.promoPiece(), from, to);
         decreaseMaterialCount(pawn);
-        increaseMaterialCount(t_move.promoPiece());
+        increaseMaterialCount(tMove.promoPiece());
         resetHMC();
         break;
     }
 
     toggleSideToMove();
 
-    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
-    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
+    mKey ^= mZobrist.getCastleKey(getCastles());
+    if (getEpState()) mKey ^= mZobrist.getEPKey(getEpSquare()%8);
 }
 
-void Board::undoMove(const Move &t_move)
+void Board::undoMove(const Move &tMove)
 {
-    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
-    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
+    mKey ^= mZobrist.getCastleKey(getCastles());
+    if (getEpState()) mKey ^= mZobrist.getEPKey(getEpSquare()%8);
 
     toggleSideToMove();
-    int move_from = t_move.from();
-    int move_to = t_move.to();
+    int move_from = tMove.from();
+    int move_to = tMove.to();
     int stm = getSideToMove();
 
     
-    switch (t_move.flag()){
+    switch (tMove.flag()){
     case quiet:
         movePiece(stm, searchMoved(move_to), move_from, move_to);
         break;
@@ -310,59 +310,59 @@ void Board::undoMove(const Move &t_move)
     case bishopPromo:
     case rookPromo:
     case queenPromo:
-        promotePiece(stm, t_move.promoPiece(), move_from, move_to);
+        promotePiece(stm, tMove.promoPiece(), move_from, move_to);
         increaseMaterialCount(pawn);
-        decreaseMaterialCount(t_move.promoPiece());
+        decreaseMaterialCount(tMove.promoPiece());
         break;
     }
 
-    m_stateHist.pop_back();
+    mStateHist.pop_back();
 
-    m_zobristKey ^= m_zobrist.getCastleKey(getCastles());
-    if (getEpState()) m_zobristKey ^= m_zobrist.getEPKey(getEpSquare()%8);
+    mKey ^= mZobrist.getCastleKey(getCastles());
+    if (getEpState()) mKey ^= mZobrist.getEPKey(getEpSquare()%8);
 }
 
-int Board::searchMoved(int t_square) const
+int Board::searchMoved(int tSquare) const
 {
     int stm = getSideToMove();
-    uint64_t mask = 1ULL << t_square & m_bitboard[stm];
+    uint64_t mask = 1ULL << tSquare & mBitboards[stm];
     for (int piece = pawn; piece <= king; piece ++) 
-        if (m_bitboard[piece] & mask) return piece;
+        if (mBitboards[piece] & mask) return piece;
     throw std::runtime_error("moved piece not found");
 }
 
-int Board::searchCaptured(int t_square) const
+int Board::searchCaptured(int tSquare) const
 {
     int stm = getSideToMove();
-    uint64_t mask = 1ULL << t_square & m_bitboard[1-stm];
+    uint64_t mask = 1ULL << tSquare & mBitboards[1-stm];
     for (int piece = queen; piece >= pawn; piece--) 
-        if (m_bitboard[piece] & mask) return piece;
+        if (mBitboards[piece] & mask) return piece;
     throw std::runtime_error("captured piece not found");
 }
 
-void Board::movePiece(int stm, int piece, int from, int to) {
-    uint64_t mask = 1ULL << from | 1ULL << to;
-    m_bitboard[piece] ^= mask;
-    m_bitboard[stm]   ^= mask;
-    m_zobristKey ^= m_zobrist.getPieceKey(stm, piece, from);
-    m_zobristKey ^= m_zobrist.getPieceKey(stm, piece, to);
+void Board::movePiece(int tSTM, int tPiece, int tFrom, int tTo) {
+    uint64_t mask = 1ULL << tFrom | 1ULL << tTo;
+    mBitboards[tPiece] ^= mask;
+    mBitboards[tSTM]   ^= mask;
+    mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tFrom);
+    mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tTo);
 }
 
-void Board::capturePiece(int stm, int piece, int sq)
+void Board::capturePiece(int tSTM, int tPiece, int tSquare)
 {
-    uint64_t mask = 1ULL << sq;
-    m_bitboard[piece] ^= mask;
-    m_bitboard[1-stm] ^= mask;
-    m_zobristKey ^= m_zobrist.getPieceKey(1-stm, piece, sq);
+    uint64_t mask = 1ULL << tSquare;
+    mBitboards[tPiece] ^= mask;
+    mBitboards[1-tSTM] ^= mask;
+    mKey ^= mZobrist.getPieceKey(1-tSTM, tPiece, tSquare);
 }
 
-void Board::promotePiece(int stm, int piece, int from, int to)
+void Board::promotePiece(int tSTM, int tPiece, int tFrom, int tTo)
 {
-    uint64_t maskTo = 1ULL << to;
-    uint64_t maskFrom = 1ULL << from;
-    m_bitboard[pawn]  ^= maskFrom;
-    m_bitboard[piece] ^= maskTo;
-    m_bitboard[stm]   ^= maskFrom | maskTo;
-    m_zobristKey ^= m_zobrist.getPieceKey(stm, pawn, from);
-    m_zobristKey ^= m_zobrist.getPieceKey(stm, piece, to);
+    uint64_t maskTo = 1ULL << tTo;
+    uint64_t maskFrom = 1ULL << tFrom;
+    mBitboards[pawn]  ^= maskFrom;
+    mBitboards[tPiece] ^= maskTo;
+    mBitboards[tSTM]   ^= maskFrom | maskTo;
+    mKey ^= mZobrist.getPieceKey(tSTM, pawn, tFrom);
+    mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tTo);
 }

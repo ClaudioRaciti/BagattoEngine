@@ -12,8 +12,8 @@ private:
         Move hashMove;
     };
 
-    size_t m_tableSize;                             // Fixed size of the hash table
-    Entry* m_table; // Fixed-size vector of optional entries
+    size_t mSize;                             // Fixed size of the hash table
+    Entry* mTable; // Fixed-size vector of optional entries
 
 public:
     // Constructor
@@ -25,16 +25,16 @@ public:
     void resize(int sizeMB);
 
     // Retrieve a value by key
-    inline TTValue getValue(uint64_t tKey) const {return m_table[tKey % m_tableSize].value;}
+    inline TTValue getValue(uint64_t tKey) const {return mTable[tKey % mSize].value;}
 
-    inline int16_t getScore(uint64_t tKey) const{return m_table[tKey % m_tableSize].value.score();}
+    inline int16_t getScore(uint64_t tKey) const{return mTable[tKey % mSize].value.score();}
 
-    inline Move getMove(uint64_t tKey) const {return m_table[tKey % m_tableSize].hashMove;}
+    inline Move getMove(uint64_t tKey) const {return mTable[tKey % mSize].hashMove;}
 
-    inline int getDepth(uint64_t tKey) const {return m_table[tKey % m_tableSize].value.depth();}
+    inline int getDepth(uint64_t tKey) const {return mTable[tKey % mSize].value.depth();}
 
-    inline int getNodeType(uint64_t tKey) const {return m_table[tKey % m_tableSize].value.nodeType();}
+    inline int getNodeType(uint64_t tKey) const {return mTable[tKey % mSize].value.nodeType();}
 
     // Check if key has been inserted
-    inline bool contains(uint64_t tKey) const {return m_table[tKey % m_tableSize].key == tKey;}
+    inline bool contains(uint64_t tKey) const {return mTable[tKey % mSize].key == tKey;}
 };

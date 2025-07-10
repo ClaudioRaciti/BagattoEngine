@@ -3,24 +3,24 @@
 #include "utils.hpp"
 
 
-uint64_t Debugger::getPerft(int t_depth)
+uint64_t Debugger::getPerft(int tDepth)
 {
     uint64_t nodes = 0;
 
-    if (t_depth == 0) 
+    if (tDepth == 0) 
         return 1ULL;
 
     std::vector<Move> moveList;
     moveList.reserve(256);
-    if(isCheck()) m_generator.evadeChecks(m_board, moveList);
-    else m_generator.generateMoves(m_board, moveList);
+    if(isCheck()) mMoveGenerator.evadeChecks(mBoard, moveList);
+    else mMoveGenerator.generateMoves(mBoard, moveList);
 
     for (auto move : moveList) {
-        m_board.makeMove(move);
+        mBoard.makeMove(move);
         if(!isInCheck()){
-            nodes += getPerft(t_depth - 1);
+            nodes += getPerft(tDepth - 1);
         }
-        m_board.undoMove(move);
+        mBoard.undoMove(move);
     }
     return nodes;
 }
@@ -28,28 +28,28 @@ uint64_t Debugger::getPerft(int t_depth)
 
 bool Debugger::isInCheck()
 {
-    int sideToMove = m_board.getSideToMove();
-    int kingSquare = m_board.getKingSquare(1 - sideToMove);
+    int sideToMove = mBoard.getSideToMove();
+    int kingSquare = mBoard.getKingSquare(1 - sideToMove);
     return isSqAttacked(kingSquare, sideToMove);
 }
 
 bool Debugger::isCheck()
 {
-    int sideToMove = m_board.getSideToMove();
-    int kingSquare = m_board.getKingSquare( sideToMove);
+    int sideToMove = mBoard.getSideToMove();
+    int kingSquare = mBoard.getKingSquare( sideToMove);
     return isSqAttacked(kingSquare, 1 - sideToMove);
 }
 
-bool Debugger::isSqAttacked(int t_square, int t_attackingSide)
+bool Debugger::isSqAttacked(int tSquare, int tAttackingSide)
 {    
-    uint64_t occupied = m_board.getBitboard(white) | m_board.getBitboard(black);
-    uint64_t pawnsSet = m_board.getBitboard(pawn) & m_board.getBitboard(t_attackingSide);
-    if ((m_lookup.pawnAttacks(t_square, 1-t_attackingSide) & pawnsSet) != 0) return true;
+    uint64_t occupied = mBoard.getBitboard(white) | mBoard.getBitboard(black);
+    uint64_t pawnsSet = mBoard.getBitboard(pawn) & mBoard.getBitboard(tAttackingSide);
+    if ((mLookup.pawnAttacks(tSquare, 1-tAttackingSide) & pawnsSet) != 0) return true;
 
 
     for (int piece = knight; piece <= king; piece ++){
-        uint64_t pieceSet = m_board.getBitboard(piece) & m_board.getBitboard(t_attackingSide);
-        if((m_lookup.getAttacks(piece, t_square, occupied) & pieceSet) != 0) return true;
+        uint64_t pieceSet = mBoard.getBitboard(piece) & mBoard.getBitboard(tAttackingSide);
+        if((mLookup.getAttacks(piece, tSquare, occupied) & pieceSet) != 0) return true;
     } 
 
     return false;

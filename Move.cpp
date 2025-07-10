@@ -1,19 +1,19 @@
 #include "Move.hpp"
 #include <map>
 
-Move::Move(const Move &t_ohter)
+Move::Move(const Move &tOther)
 {
-    m_move = t_ohter.m_move;
+    mMove = tOther.mMove;
 }
 
-Move::Move(int t_from, int t_to, int t_flag)
+Move::Move(int tFrom, int tTo, int tFlag)
 {
-    m_move = (t_flag & 0x0f) << 12 | (t_from & 0x3f) << 6 | (t_to & 0x3f);
+    mMove = (tFlag & 0x0f) << 12 | (tFrom & 0x3f) << 6 | (tTo & 0x3f);
 }
 
-void Move::operator=(Move otherObj)
+void Move::operator=(Move tOther)
 {
-    m_move = otherObj.m_move;
+    mMove = tOther.mMove;
 }
 
 std::string Move::asString() const
@@ -50,14 +50,14 @@ std::string Move::asString() const
     return output;
 }
 
-bool operator==(const Move &thisObj, const Move &otherObj)
+bool operator==(const Move &tThis, const Move &tOther)
 {
-    return thisObj.m_move == otherObj.m_move;
+    return tThis.mMove == tOther.mMove;
 }
 
-bool operator!=(const Move &thisObj, const Move &otherObj)
+bool operator!=(const Move &tThis, const Move &tOther)
 {
-    return thisObj.m_move != otherObj.m_move;
+    return tThis.mMove != tOther.mMove;
 }
 
 std::ostream &operator<<(std::ostream &os, const Move &cm)

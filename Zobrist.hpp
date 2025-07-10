@@ -17,34 +17,32 @@ public:
 
     static constexpr int PIECE_OFFSET[7] = {0, 0, 64, 128, 192, 256, 320};
     static constexpr int SIDE_OFFSET[2] = { 0, 384 };
-    inline uint64_t getPieceKey(int stm, int piece, int square) const {
-        return m_pieceKey[SIDE_OFFSET[stm] + PIECE_OFFSET[piece] + square];
+    inline uint64_t getPieceKey(int tSTM, int tPiece, int tSquare) const {
+        return mPieceKeys[SIDE_OFFSET[tSTM] + PIECE_OFFSET[tPiece] + tSquare];
     }
     
-    inline uint64_t getCastleKey(int castleFlag) const {return m_castleKey[castleFlag];}
-    inline uint64_t getEPKey(int EPFile) const {return m_EPKey[EPFile];}
-    inline uint64_t getSTMKey() const {return m_STMKey;}
+    inline uint64_t getCastleKey(int tCastleFlag) const {return mCastleKeys[tCastleFlag];}
+    inline uint64_t getEPKey(int tEPFile) const {return mEPKeys[tEPFile];}
+    inline uint64_t getSTMKey() const {return mSTMKey;}
 
 private:
 
     Zobrist();
-    ~Zobrist() {delete m_instance; m_instance = nullptr;}
+    ~Zobrist() {delete mInstance; mInstance = nullptr;}
 
     void initPieces();
     void initCastle();
     void initEP();
     void initSideToMove();
 
-    inline int getIndex(int sideToMove, int piece, int square) const {return 384 * sideToMove + 64 * (piece - pawn) + square;}
-
 private:
-    static Zobrist* m_instance;
+    static Zobrist* mInstance;
 
-    std::array<uint64_t, 768> m_pieceKey;
-    std::array<uint64_t, 16> m_castleKey;
-    std::array<uint64_t, 8> m_EPKey;
-    uint64_t m_STMKey;
+    std::array<uint64_t, 768> mPieceKeys;
+    std::array<uint64_t, 16> mCastleKeys;
+    std::array<uint64_t, 8> mEPKeys;
+    uint64_t mSTMKey;
 
-    std::mt19937_64 rng;
-    std::uniform_int_distribution<uint64_t> device;
+    std::mt19937_64 mRng;
+    std::uniform_int_distribution<uint64_t> mDevice;
 };

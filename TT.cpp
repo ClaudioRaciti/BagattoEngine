@@ -2,28 +2,28 @@
 
 #include <cassert>
 
-TT::TT(int sizeMB)
+TT::TT(int tMBSize)
 {
-    m_tableSize = sizeMB * 1024 * 1024 / sizeof(Entry);
-    m_table = new Entry[m_tableSize];
-    std::fill(m_table, m_table + m_tableSize, Entry{});
+    mSize = tMBSize * 1024 * 1024 / sizeof(Entry);
+    mTable = new Entry[mSize];
+    std::fill(mTable, mTable + mSize, Entry{});
 }
 
 TT::~TT()
 {
-    delete[] m_table;
+    delete[] mTable;
 }
 
 void TT::insert(uint64_t tKey, int16_t tScore, int tDepth, int tNodeType, Move tHashMove)
 {
-    size_t index = tKey % m_tableSize;
-    m_table[index] = Entry{tKey, TTValue(tScore, tDepth, tNodeType), tHashMove};
+    size_t index = tKey % mSize;
+    mTable[index] = Entry{tKey, TTValue(tScore, tDepth, tNodeType), tHashMove};
 }
 
-void TT::resize(int sizeMB)
+void TT::resize(int tMBSize)
 {
-    m_tableSize = sizeMB * 1024 * 1024 / sizeof(Entry);
-    delete[] m_table;
-    m_table = new Entry[m_tableSize];
-    std::cout << "Successfully allocated " << sizeMB << "MB \t" << m_tableSize << " objects" << std::endl;
+    mSize = tMBSize * 1024 * 1024 / sizeof(Entry);
+    delete[] mTable;
+    mTable = new Entry[mSize];
+    std::cout << "Successfully allocated " << tMBSize << "MB \t" << mSize << " objects" << std::endl;
 }

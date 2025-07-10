@@ -30,20 +30,20 @@ public:
     Engine(): mTT{1}, mBoard{Board(STARTPOS)} {}
     ~Engine() {stopSearch();}
     void resizeTT(int sizeMB);
-    void setPos(std::string t_position);
-    void makeMove(std::string t_move);
+    void setPos(std::string tPosition);
+    void makeMove(std::string tMove);
     void goSearch(SearchLimits tLimits);
     void stopSearch();    
 private:
-    void mainSearch(int t_depth);
-    void printSearchInfo(int t_maxDepth, int64_t t_elapsedTime, int16_t eval, std::vector<Move> &t_PV);
-    int16_t alphaBeta(int t_depth, int16_t alpha, int16_t beta, std::vector<Move> &t_PV);
-    int16_t quiescence(int16_t t_alpha, int16_t t_beta);
+    void mainSearch(int tDepht);
+    void printSearchInfo(int tMaxDepth, int64_t tElapsed, int16_t tEval, std::vector<Move> &tPV);
+    int16_t alphaBeta(int tDepht, int16_t tAlpha, int16_t tBeta, std::vector<Move> &tPV);
+    int16_t quiescence(int16_t tAlpha, int16_t tBeta);
     int gamePhase();
     bool isIllegal(); // opponent side is in check but its not his turn
     bool isCheck();   // opponent side gives check and its your turn
     bool promoThreat();
-    bool hashUsageCondition(int hashNodeType, int hashScore, int t_alpha, int t_beta);
+    bool hashUsageCondition(int tNodeType, int tScore, int tAlpha, int tBeta);
     bool threefoldRepetition();
     bool fiftyMove();
     bool exitSearch();

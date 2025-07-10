@@ -2,11 +2,11 @@
 #include <unordered_set>
 #include <cassert>
 
-Zobrist* Zobrist::m_instance = nullptr;
+Zobrist* Zobrist::mInstance = nullptr;
 
 Zobrist::Zobrist(): 
-    rng{std::mt19937_64(5829046653945461000ULL)}, 
-    device{std::uniform_int_distribution<uint64_t>(0, UINT64_MAX)}{
+    mRng{std::mt19937_64(5829046653945461000ULL)}, 
+    mDevice{std::uniform_int_distribution<uint64_t>(0, UINT64_MAX)}{
     initPieces();
     initCastle();
     initEP();
@@ -14,22 +14,22 @@ Zobrist::Zobrist():
 }
 
 const Zobrist& Zobrist::getInstance(){
-    if (m_instance == nullptr) m_instance = new Zobrist();
-    return *m_instance;
+    if (mInstance == nullptr) mInstance = new Zobrist();
+    return *mInstance;
 }
 
 void Zobrist::initPieces(){
-    for (uint64_t& val : m_pieceKey) val = device(rng);
+    for (uint64_t& val : mPieceKeys) val = mDevice(mRng);
 }
 
 void Zobrist::initCastle(){
-    for (uint64_t& val : m_castleKey) val = device(rng);
+    for (uint64_t& val : mCastleKeys) val = mDevice(mRng);
 }
 
 void Zobrist::initEP(){
-    for (uint64_t& val : m_EPKey) val = device(rng);
+    for (uint64_t& val : mEPKeys) val = mDevice(mRng);
 }
 
 void Zobrist::initSideToMove(){
-    m_STMKey = device(rng);
+    mSTMKey = mDevice(mRng);
 }
