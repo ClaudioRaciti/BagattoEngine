@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <random>
 
-#include "notation.hpp"
-
 class Zobrist
 {
 public:

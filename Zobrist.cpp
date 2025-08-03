@@ -1,5 +1,4 @@
 #include "Zobrist.hpp"
-#include <unordered_set>
 #include <cassert>
 
 Zobrist* Zobrist::mInstance = nullptr;

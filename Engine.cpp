@@ -1,10 +1,12 @@
 #include "Engine.hpp"
+#include "Move.hpp"
 #include "evaluation.hpp" 
 #include "notation.hpp"
 #include "utils.hpp"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <stdexcept>
 
 void Engine::resizeTT(int tMBSize)
@@ -28,7 +30,7 @@ void Engine::makeMove(std::string tMove)
     const std::lock_guard guard(mEngineMutex);
     std::vector<Move> moveList;
     moveList.reserve(256);
-    mGenerator.generateMoves(mBoard, moveList);
+    mGenerator.generate(mBoard, moveList);
     for (auto move : moveList) if (tMove == move.asString()){
         mBoard.makeMove(move);
         mGameHist.emplace_back(mBoard.getHash());
@@ -42,7 +44,7 @@ void Engine::goSearch(SearchLimits tLimits)
     stopSearch();
     mGoSearch = true;
     mLimits = tLimits;
-    int depth = tLimits.infinite ? INT32_MAX : tLimits.depth;
+    int depth = tLimits.infinite ? 99 : tLimits.depth;
     mThread = std::thread(&Engine::mainSearch, this, depth);
 }
 
@@ -120,7 +122,7 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
 
     mSearchedNodes +=1;
 
-    Move bestMove;
+    Move bestMove, hashMove;
     int16_t bestScore = CHECKMATE - tDepth; 
     int bestNodeType = allNode;
     std::vector<Move> line(tDepth);
@@ -129,7 +131,7 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
     // Hash move search
     if (mTT.contains(hashKey)){
         TTValue hashValue = mTT.getValue(hashKey);
-        Move hashMove  = mTT.getMove(hashKey);
+        hashMove = mTT.getMove(hashKey);
         int16_t hashScore = (hashValue.score() == CHECKMATE) ? CHECKMATE - tDepth : hashValue.score();
 
         if (hashValue.depth() >= tDepth && hashUsageCondition(hashValue.nodeType(), hashScore, tAlpha, tBeta)){
@@ -137,68 +139,31 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
             tPV.emplace_back(hashMove); 
             return hashScore;
         }
+    }
 
-        mBoard.makeMove(hashMove);
+    std::vector<Move> moveList;
+    moveList.reserve(256);
+    mGenerator.generate(mBoard, moveList);
+    auto it = std::partition(moveList.begin(), moveList.end(), [](const Move m){return m.isCapture();});
+    std::sort(moveList.begin(), it, [&](const Move m1, const Move m2){
+        return mBoard.searchCaptured(m1.to())>mBoard.searchCaptured(m2.to());
+    });
+    std::partition(it, moveList.end(), [&](const Move m){
+        return m == mKillers[tDepth-1][0] || m == mKillers[tDepth-1][1];
+    });
+    it = std::find(moveList.begin(), moveList.end(), hashMove);
+    if (it != moveList.end()) std::rotate(moveList.begin(), it, it + 1);
+    for (Move move : moveList){
+        mBoard.makeMove(move);
         mGameHist.emplace_back(mBoard.getHash());
         if(!isIllegal()){
             int16_t score;
-            if (hashValue.nodeType() == pvNode){
+            // zero-window search if alpha has already been raised
+            if (bestNodeType == pvNode)
                 score = -alphaBeta(tDepth - 1, -tAlpha - 1, -tAlpha, line);
-                if (score > tAlpha && score < tBeta){
-                    score = -alphaBeta(tDepth -1, -tBeta, -tAlpha, line);
-                }
-            }
-            else{
+            // full window search if alpha hasn't been searched or move could raise alpha
+            if (bestNodeType != pvNode || (score > tAlpha && score < tBeta))
                 score = -alphaBeta(tDepth - 1, -tBeta, -tAlpha, line);
-            }
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = hashMove;
-                if (bestScore > tAlpha) {
-                    bestNodeType = pvNode;
-                    tAlpha = bestScore;
-                    tPV = line;
-                    tPV.emplace_back(hashMove);
-                }
-            }
-        }
-        mBoard.undoMove(hashMove);
-        mGameHist.pop_back();
-
-        if (tAlpha >= tBeta){
-            if (!exitSearch()) mTT.insert(hashKey, bestScore, tDepth, cutNode, bestMove);
-            if (!hashMove.isCapture() && mKillers[tDepth-1][0] != hashMove){
-                mKillers[tDepth-1][1] = mKillers[tDepth-1][0];
-                mKillers[tDepth-1][0] = hashMove;
-            }
-            return bestScore;
-        }
-    }
-
-    std::vector<Move> captureList;
-    captureList.reserve(256);
-    mGenerator.generateCaptures(mBoard, captureList);
-    std::sort(captureList.begin(), captureList.end(), [this](const Move& m1, const Move& m2){
-        if (m1.isEnPassant()) return false;
-        else if (m2.isEnPassant()) return true;
-        else return this->mBoard.searchCaptured(m1.to()) > this->mBoard.searchCaptured(m2.to());
-    });
-
-    for(const auto& move : captureList){
-        mBoard.makeMove(move);
-        mGameHist.emplace_back(mBoard.getHash());
-        if (!isIllegal()){
-            int16_t score;
-            if (bestNodeType == pvNode){
-                score = -alphaBeta(tDepth - 1, -tAlpha - 1, -tAlpha, line);
-                if (score > tAlpha && score < tBeta){
-                    score = -alphaBeta(tDepth -1, -tBeta, -tAlpha, line);
-                }
-            }
-            else{
-                score = -alphaBeta(tDepth - 1, -tBeta, -tAlpha, line);
-            }
 
             if (score > bestScore) {
                 bestScore = score;
@@ -216,49 +181,7 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
 
         if (tAlpha >= tBeta){
             if (!exitSearch()) mTT.insert(hashKey, bestScore, tDepth, cutNode, bestMove);
-            return bestScore;
-        }
-    }
-
-    std::vector<Move> quietList;
-    quietList.reserve(256);
-    mGenerator.generateQuiets(mBoard, quietList);
-    std::partition(quietList.begin(), quietList.end(), [&](const Move& m){
-        return m == mKillers[tDepth-1][0] || m == mKillers[tDepth-1][1];
-    });
-
-    for(const auto& move : quietList){
-        mBoard.makeMove(move);
-        mGameHist.emplace_back(mBoard.getHash());
-        if (!isIllegal()){
-            int16_t score;
-            if (bestNodeType == pvNode){
-                score = -alphaBeta(tDepth - 1, -tAlpha - 1, -tAlpha, line);
-                if (score > tAlpha && score < tBeta){
-                    score = -alphaBeta(tDepth -1, -tBeta, -tAlpha, line);
-                }
-            }
-            else{
-                score = -alphaBeta(tDepth - 1, -tBeta, -tAlpha, line);
-            }
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = move;
-                if (bestScore > tAlpha) {
-                    bestNodeType = pvNode;
-                    tAlpha = bestScore;
-                    tPV = line;
-                    tPV.emplace_back(move);
-                }
-            }
-        }
-        mBoard.undoMove(move);
-        mGameHist.pop_back();
-
-        if (tAlpha >= tBeta){
-            if (!exitSearch()) mTT.insert(hashKey, bestScore, tDepth, cutNode, bestMove);
-            if (mKillers[tDepth-1][0] != move){
+            if (!move.isCapture() && mKillers[tDepth-1][0] != move){
                 mKillers[tDepth-1][1] = mKillers[tDepth-1][0];
                 mKillers[tDepth-1][0] = move;
             }
@@ -303,7 +226,8 @@ int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
         }
         else if(bestScore + (promoThreat() ? 1800 : 1000) < tAlpha) return bestScore;
 
-        mGenerator.generateCaptures(mBoard, moveList);
+        uint64_t enemySet = mBoard.getBitboard(1 - mBoard.getSideToMove());
+        mGenerator.generate(enemySet, mBoard, moveList);
         std::sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
             if (m1.isEnPassant()) return false;
             else if (m2.isEnPassant()) return true;

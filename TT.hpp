@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include "TTValue.hpp"
 #include "Move.hpp"
 

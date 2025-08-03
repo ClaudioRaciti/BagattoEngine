@@ -1,9 +1,7 @@
 #pragma once
-#include <vector>
 #include <cstdint>
 
 #include "Board.hpp"
-#include "Move.hpp"
 #include "MoveGenerator.hpp"
 #include "MagicBitboards.hpp"
 #include "TT.hpp"

@@ -1,4 +1,5 @@
 #include "UCI.hpp"
+#include "notation.hpp"
 #include "utils.hpp"
 #include <iostream>
 #include <string>
@@ -14,14 +15,14 @@ void UCI::loop()
         iss >> std::skipws >> token;
 
         if (token == "uci") {
-            std::string uciInfo = "id name Bagatto\nid author Claudio Raciti\noption name Hash type spin default 1 min 1 max 128\nuciok\n";
+            std::string uciInfo = "id name Bagatto\nid author Claudio Raciti\noption name Hash type spin default 1 min 1 max 128\nuciok";
             std::cout << uciInfo << std::endl;
         }
         else if (token == "isready") {
             std::cout << "readyok" << std::endl;
         }
         else if (token == "ucinewgame"){
-            mEngine.setPos(KIWIPETE);
+            mEngine.setPos(STARTPOS);
         }
         else if (token == "setoptions"){
             std::string idName, name, idValue, value;

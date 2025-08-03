@@ -1,8 +1,6 @@
 #include "Board.hpp"
 #include "utils.hpp"
 #include <cassert>
-#include <bitset>
-#include <random>
 
 Board::Board(std::string tFEN):
     mZobrist{Zobrist::getInstance()}{
@@ -337,7 +335,7 @@ int Board::searchCaptured(int tSquare) const
     uint64_t mask = 1ULL << tSquare & mBitboards[1-stm];
     for (int piece = queen; piece >= pawn; piece--) 
         if (mBitboards[piece] & mask) return piece;
-    throw std::runtime_error("captured piece not found");
+    return 0;
 }
 
 void Board::movePiece(int tSTM, int tPiece, int tFrom, int tTo) {
