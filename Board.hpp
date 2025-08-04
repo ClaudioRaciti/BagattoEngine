@@ -32,7 +32,7 @@ public:
 
     inline int getMaterialCount() const {return mMaterialCount;}
 
-    uint64_t getHash() const;
+    inline uint64_t getHash() const {return mKey;}
 
     void makeMove(const Move &tMove);
     void undoMove(const Move &tMove);

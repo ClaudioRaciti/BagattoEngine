@@ -1,5 +1,6 @@
 #include "Engine.hpp"
 #include "Move.hpp"
+#include "TT.hpp"
 #include "evaluation.hpp" 
 #include "notation.hpp"
 #include "utils.hpp"
@@ -122,25 +123,20 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
 
     mSearchedNodes +=1;
 
-    Move bestMove, hashMove;
-    int16_t bestScore = CHECKMATE - tDepth; 
-    int bestNodeType = allNode;
-    std::vector<Move> line(tDepth);
-    
+    // Hash move search    
     uint64_t hashKey = mBoard.getHash();
-    // Hash move search
-    if (mTT.contains(hashKey)){
-        TTValue hashValue = mTT.getValue(hashKey);
-        hashMove = mTT.getMove(hashKey);
-        int16_t hashScore = (hashValue.score() == CHECKMATE) ? CHECKMATE - tDepth : hashValue.score();
-
-        if (hashValue.depth() >= tDepth && hashUsageCondition(hashValue.nodeType(), hashScore, tAlpha, tBeta)){
-            tPV = line;
-            tPV.emplace_back(hashMove); 
-            return hashScore;
-        }
+    auto [ttHit, ttEntry] = mTT.probe(hashKey);
+    if (ttHit && hashUsageCondition(ttEntry, tDepth, tAlpha, tBeta)){
+            tPV.emplace_back(ttEntry.hashMove); 
+            return ttEntry.score;
     }
 
+    Move bestMove;
+    int16_t bestScore = CHECKMATE - tDepth; 
+    uint8_t bestNodeType = allNode;
+    std::vector<Move> line(tDepth);
+
+    // Generating and sorting all the moves
     std::vector<Move> moveList;
     moveList.reserve(256);
     mGenerator.generate(mBoard, moveList);
@@ -151,8 +147,12 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
     std::partition(it, moveList.end(), [&](const Move m){
         return m == mKillers[tDepth-1][0] || m == mKillers[tDepth-1][1];
     });
-    it = std::find(moveList.begin(), moveList.end(), hashMove);
-    if (it != moveList.end()) std::rotate(moveList.begin(), it, it + 1);
+    if(ttHit) {
+        it = std::find(moveList.begin(), moveList.end(), ttEntry.hashMove);
+        if (it != moveList.end()) std::rotate(moveList.begin(), it, it + 1);
+    }
+
+    // Searching the moves
     for (Move move : moveList){
         mBoard.makeMove(move);
         mGameHist.emplace_back(mBoard.getHash());
@@ -180,7 +180,8 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
         mGameHist.pop_back();
 
         if (tAlpha >= tBeta){
-            if (!exitSearch()) mTT.insert(hashKey, bestScore, tDepth, cutNode, bestMove);
+            if (!exitSearch() && tDepth >= ttEntry.depht) 
+                mTT.insert({hashKey, bestScore, uint8_t(tDepth), cutNode, bestMove});
             if (!move.isCapture() && mKillers[tDepth-1][0] != move){
                 mKillers[tDepth-1][1] = mKillers[tDepth-1][0];
                 mKillers[tDepth-1][0] = move;
@@ -189,16 +190,9 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
         }
     }
 
-    if(!exitSearch()){
-        // In
-        if (bestScore != CHECKMATE - tDepth)
-            mTT.insert(hashKey, bestScore, tDepth, bestNodeType, bestMove); 
-        else if (isCheck())
-            mTT.insert(hashKey, CHECKMATE, INT16_MAX, pvNode, bestMove); // Rescale checkmate value for tt insertion
-        else {
-            bestScore = DRAW; 
-            mTT.insert(hashKey, DRAW, INT16_MAX, pvNode, bestMove);
-        } // Stalemate
+    if(!exitSearch() && tDepth >= ttEntry.depht){
+        if (bestScore == CHECKMATE - tDepth && !isCheck()) bestScore = DRAW;
+        mTT.insert({hashKey, bestScore, uint8_t(tDepth), bestNodeType, bestMove});
     }
     
     return bestScore;
@@ -283,11 +277,13 @@ bool Engine::promoThreat()
     return mBoard.getBitboard(pawn) & mBoard.getBitboard(stm) & seventhRank[stm];
 }
 
-bool Engine::hashUsageCondition(int tNodeType, int tScore, int tAlpha, int tBeta)
+bool Engine::hashUsageCondition(TTEntry tTTVal, int tDepht, int tAlpha, int tBeta)
 {
-    return (tNodeType == pvNode)
-        || (tNodeType == allNode && tScore <= tAlpha)
-        || (tNodeType == cutNode && tScore >= tBeta );
+    return tTTVal.depht >= tDepht && (
+            (tTTVal.nodeType == pvNode)
+            || (tTTVal.nodeType == allNode && tTTVal.score <= tAlpha)
+            || (tTTVal.nodeType == cutNode && tTTVal.score >= tBeta )
+        );
 }
 
 bool Engine::threefoldRepetition()

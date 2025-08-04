@@ -1,11 +1,11 @@
 #include "Zobrist.hpp"
 #include <cassert>
+#include <cstdint>
 
 Zobrist* Zobrist::mInstance = nullptr;
 
 Zobrist::Zobrist(): 
-    mRng{std::mt19937_64(5829046653945461000ULL)}, 
-    mDevice{std::uniform_int_distribution<uint64_t>(0, UINT64_MAX)}{
+    mRng{std::mt19937_64(5829046653945461000ULL)}{
     initPieces();
     initCastle();
     initEP();
@@ -18,17 +18,17 @@ const Zobrist& Zobrist::getInstance(){
 }
 
 void Zobrist::initPieces(){
-    for (uint64_t& val : mPieceKeys) val = mDevice(mRng);
+    for (uint64_t& val : mPieceKeys) val = mRng();
 }
 
 void Zobrist::initCastle(){
-    for (uint64_t& val : mCastleKeys) val = mDevice(mRng);
+    for (uint64_t& val : mCastleKeys) val = mRng();
 }
 
 void Zobrist::initEP(){
-    for (uint64_t& val : mEPKeys) val = mDevice(mRng);
+    for (uint64_t& val : mEPKeys) val = mRng();
 }
 
 void Zobrist::initSideToMove(){
-    mSTMKey = mDevice(mRng);
+    mSTMKey = mRng();
 }

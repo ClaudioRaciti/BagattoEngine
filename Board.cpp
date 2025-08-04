@@ -158,11 +158,6 @@ bool Board::operator!=(const Board &tOther) const
     return (mBitboards != tOther.mBitboards) || ((mStateHist.back() & ~mask) != (tOther.mStateHist.back() & ~mask));
 }
 
-uint64_t Board::getHash() const
-{
-    return mKey;
-}
-
 void Board::makeMove(const Move &tMove)
 {
     mKey ^= mZobrist.getCastleKey(getCastles());

@@ -1,12 +1,12 @@
 #include "TT.hpp"
-
 #include <cassert>
+#include <cstdint>
+#include <tuple>
 
 TT::TT(int tMBSize)
 {
-    mSize = tMBSize * 1024 * 1024 / sizeof(Entry);
-    mTable = new Entry[mSize];
-    std::fill(mTable, mTable + mSize, Entry{});
+    mSize = tMBSize * 1024 * 1024 / sizeof(TTEntry);
+    mTable = new TTEntry[mSize];
 }
 
 TT::~TT()
@@ -14,16 +14,21 @@ TT::~TT()
     delete[] mTable;
 }
 
-void TT::insert(uint64_t tKey, int16_t tScore, int tDepth, int tNodeType, Move tHashMove)
-{
-    size_t index = tKey % mSize;
-    mTable[index] = Entry{tKey, TTValue(tScore, tDepth, tNodeType), tHashMove};
-}
-
 void TT::resize(int tMBSize)
 {
-    mSize = tMBSize * 1024 * 1024 / sizeof(Entry);
+    mSize = tMBSize * 1024 * 1024 / sizeof(TTEntry);
     delete[] mTable;
-    mTable = new Entry[mSize];
-    std::cout << "Successfully allocated " << tMBSize << "MB \t" << mSize << " objects" << std::endl;
+    mTable = new TTEntry[mSize];
+}
+
+void TT::insert(TTEntry tEntry){
+    size_t index = tEntry.key % mSize;
+    mTable[index] = tEntry;
+}
+
+std::tuple<bool, TTEntry> TT::probe(uint64_t tKey){
+    size_t index = tKey % mSize;
+    TTEntry& entry = mTable[index];
+
+    return {entry.key == tKey, entry};
 }

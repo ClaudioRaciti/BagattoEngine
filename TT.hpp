@@ -1,18 +1,26 @@
 #pragma once
 
-#include "TTValue.hpp"
 #include "Move.hpp"
+#include <cstdint>
+#include <tuple>
+
+struct TTEntry{
+    uint64_t key;
+    int16_t score;
+    uint8_t depht = 0;
+    uint8_t nodeType;
+    Move hashMove;
+
+    TTEntry() = default;
+    TTEntry(uint64_t tKey, int16_t tScore, uint8_t tDepth, uint8_t tNodeType, Move tMove) :
+        key{tKey}, score(tScore), depht(tDepth), nodeType(tNodeType), hashMove(tMove){}
+};
 
 class TT {
 private:
-    struct Entry {
-        uint64_t key = 0ULL;
-        TTValue value;
-        Move hashMove;
-    };
 
     size_t mSize;                             // Fixed size of the hash table
-    Entry* mTable; // Fixed-size vector of optional entries
+    TTEntry* mTable;                            // Fixed-size vector of optional entries
 
 public:
     // Constructor
@@ -20,20 +28,7 @@ public:
     ~TT();
 
     // Insert a key-value pair (overwriting on collision)
-    void insert(uint64_t tKey, int16_t tScore, int tDepth, int tNodeType, Move tHashMove);
     void resize(int sizeMB);
-
-    // Retrieve a value by key
-    inline TTValue getValue(uint64_t tKey) const {return mTable[tKey % mSize].value;}
-
-    inline int16_t getScore(uint64_t tKey) const{return mTable[tKey % mSize].value.score();}
-
-    inline Move getMove(uint64_t tKey) const {return mTable[tKey % mSize].hashMove;}
-
-    inline int getDepth(uint64_t tKey) const {return mTable[tKey % mSize].value.depth();}
-
-    inline int getNodeType(uint64_t tKey) const {return mTable[tKey % mSize].value.nodeType();}
-
-    // Check if key has been inserted
-    inline bool contains(uint64_t tKey) const {return mTable[tKey % mSize].key == tKey;}
+    void insert(TTEntry tEntry);
+    std::tuple<bool, TTEntry> probe(uint64_t tKey);
 };

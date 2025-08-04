@@ -18,7 +18,6 @@ add_executable(
     MagicBitboards.cpp
     Debugger.hpp
     Debugger.cpp
-    TTValue.hpp
     TT.hpp
     TT.cpp
     evaluation.hpp

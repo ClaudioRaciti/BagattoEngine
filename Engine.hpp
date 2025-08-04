@@ -43,7 +43,7 @@ private:
     bool isIllegal(); // opponent side is in check but its not his turn
     bool isCheck();   // opponent side gives check and its your turn
     bool promoThreat();
-    bool hashUsageCondition(int tNodeType, int tScore, int tAlpha, int tBeta);
+    bool hashUsageCondition(TTEntry tTTVal, int tDepht, int tAlpha, int tBeta);
     bool threefoldRepetition();
     bool fiftyMove();
     bool exitSearch();

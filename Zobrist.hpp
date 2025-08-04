@@ -42,5 +42,4 @@ private:
     uint64_t mSTMKey;
 
     std::mt19937_64 mRng;
-    std::uniform_int_distribution<uint64_t> mDevice;
 };
