@@ -142,7 +142,7 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
     mGenerator.generate(mBoard, moveList);
     auto it = std::partition(moveList.begin(), moveList.end(), [](const Move m){return m.isCapture();});
     std::sort(moveList.begin(), it, [&](const Move m1, const Move m2){
-        return mBoard.searchCaptured(m1.to())>mBoard.searchCaptured(m2.to());
+        return mBoard.searchPiece(m1.to())>mBoard.searchPiece(m2.to());
     });
     std::partition(it, moveList.end(), [&](const Move m){
         return m == mKillers[tDepth-1][0] || m == mKillers[tDepth-1][1];
@@ -225,7 +225,7 @@ int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
         std::sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
             if (m1.isEnPassant()) return false;
             else if (m2.isEnPassant()) return true;
-            else return this->mBoard.searchCaptured(m1.to()) > this->mBoard.searchCaptured(m2.to());
+            else return this->mBoard.searchPiece(m1.to()) > this->mBoard.searchPiece(m2.to());
         });
     }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Engine.hpp"
-#include "notation.hpp"
 #include <sstream>
 
 class UCI

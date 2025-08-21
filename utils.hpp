@@ -5,6 +5,7 @@
 #include <string>
 #include <chrono>
 
+
 // Time variables
 using TimePoint = std::chrono::milliseconds::rep;  // A value in milliseconds
 static_assert(sizeof(TimePoint) == sizeof(int64_t), "TimePoint should be 64 bits");

@@ -1,6 +1,4 @@
 #include "utils.hpp"
-#include "notation.hpp"
-
 #include <cassert>
 #include <algorithm>
 #include <sstream>
