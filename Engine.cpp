@@ -1,5 +1,6 @@
 #include "Engine.hpp"
 #include "Move.hpp"
+#include "MoveGenerator.hpp"
 #include "TT.hpp"
 #include "evaluation.hpp" 
 #include "notation.hpp"
@@ -9,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <stdexcept>
+#include <vector>
 
 void Engine::resizeTT(int tMBSize)
 {
@@ -31,7 +33,7 @@ void Engine::makeMove(std::string tMove)
     const std::lock_guard guard(mEngineMutex);
     std::vector<Move> moveList;
     moveList.reserve(256);
-    mGenerator.generate(mBoard, moveList);
+    mGenerator.all(mBoard, moveList);
     for (auto move : moveList) if (tMove == move.asString()){
         mBoard.makeMove(move);
         mGameHist.emplace_back(mBoard.getHash());
@@ -121,14 +123,12 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
     if (exitSearch() || threefoldRepetition() || fiftyMove()) return DRAW;
     if (tDepth == 0) return quiescence(tAlpha, tBeta);  
 
-    mSearchedNodes +=1;
-
     // Hash move search    
     uint64_t hashKey = mBoard.getHash();
     auto [ttHit, ttEntry] = mTT.probe(hashKey);
-    if (ttHit && hashUsageCondition(ttEntry, tDepth, tAlpha, tBeta)){
-            tPV.emplace_back(ttEntry.hashMove); 
-            return ttEntry.score;
+    if( ttHit && hashUsageCondition(ttEntry, tDepth, tAlpha, tBeta)){
+        tPV.emplace_back(ttEntry.hashMove); 
+        return ttEntry.score;
     }
 
     Move bestMove;
@@ -136,24 +136,10 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
     uint8_t bestNodeType = allNode;
     std::vector<Move> line(tDepth);
 
-    // Generating and sorting all the moves
-    std::vector<Move> moveList;
-    moveList.reserve(256);
-    mGenerator.generate(mBoard, moveList);
-    auto it = std::partition(moveList.begin(), moveList.end(), [](const Move m){return m.isCapture();});
-    std::sort(moveList.begin(), it, [&](const Move m1, const Move m2){
-        return mBoard.searchPiece(m1.to())>mBoard.searchPiece(m2.to());
-    });
-    std::partition(it, moveList.end(), [&](const Move m){
-        return m == mKillers[tDepth-1][0] || m == mKillers[tDepth-1][1];
-    });
-    if(ttHit) {
-        it = std::find(moveList.begin(), moveList.end(), ttEntry.hashMove);
-        if (it != moveList.end()) std::rotate(moveList.begin(), it, it + 1);
-    }
+    mSearchedNodes +=1;
 
-    // Searching the moves
-    for (Move move : moveList){
+    // Lambda function for searching individual moves
+    auto searchMove = [&] (Move move) {
         mBoard.makeMove(move);
         mGameHist.emplace_back(mBoard.getHash());
         if(!isIllegal()){
@@ -178,16 +164,56 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
         }
         mBoard.undoMove(move);
         mGameHist.pop_back();
+    };
 
+    // Lambda function for checking if the node fails high and populating TT accordingly
+    auto failsHigh = [&] (Move move, int TTDepth){
         if (tAlpha >= tBeta){
-            if (!exitSearch() && tDepth >= ttEntry.depht) 
+            if (!exitSearch() && tDepth >= TTDepth) 
                 mTT.insert({hashKey, bestScore, uint8_t(tDepth), cutNode, bestMove});
             if (!move.isCapture() && mKillers[tDepth-1][0] != move){
                 mKillers[tDepth-1][1] = mKillers[tDepth-1][0];
                 mKillers[tDepth-1][0] = move;
             }
-            return bestScore;
+            return true;
         }
+        return false;
+    };
+
+    if (ttHit && mGenerator.isPseudoLegal(mBoard, ttEntry.hashMove)){
+        searchMove(ttEntry.hashMove);
+        if (failsHigh(ttEntry.hashMove, ttEntry.depht))
+            return bestScore;
+    }
+
+    // Generating, sorting and searching captures
+    std::vector<Move> captures;
+    captures.reserve(256);
+    mGenerator.captures(mBoard, captures);
+
+    std::sort(captures.begin(), captures.end(),[&](const Move m1, const Move m2){
+        return mBoard.searchPiece(m1.to())>mBoard.searchPiece(m2.to());
+    });
+    
+    for(Move move : captures){
+        searchMove(move);
+        if(failsHigh(move, ttEntry.depht))
+            return bestScore;
+    }
+
+    // Generating, sorting and searching quiets
+    std::vector<Move> quiets;
+    quiets.reserve(256);
+    mGenerator.quiets(mBoard, quiets);
+
+    std::partition(quiets.begin(), quiets.end(), [&](const Move m){
+        return m == mKillers[tDepth-1][0] || m == mKillers[tDepth-1][1];
+    });
+
+    for (Move move : quiets){
+        searchMove(move);
+        if(failsHigh(move, ttEntry.depht))
+            return bestScore;
     }
 
     if(!exitSearch() && tDepth >= ttEntry.depht){
@@ -260,14 +286,14 @@ bool Engine::isIllegal()
 {
     const int stm = mBoard.getSideToMove();
     const int kingSquare = mBoard.getKingSquare(1 - stm);
-    return mGenerator.isSquareAttacked(mBoard, kingSquare, stm);
+    return mGenerator.isAttacked(mBoard, kingSquare, stm);
 }
 
 bool Engine::isCheck()
 {
     const int stm = mBoard.getSideToMove();
     const int kingSquare = mBoard.getKingSquare(stm);
-    return mGenerator.isSquareAttacked(mBoard, kingSquare, 1 - stm);
+    return mGenerator.isAttacked(mBoard, kingSquare, 1 - stm);
 }
 
 bool Engine::promoThreat()

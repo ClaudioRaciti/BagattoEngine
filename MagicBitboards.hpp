@@ -26,7 +26,7 @@ public:
         case 6: return queenAttacks(tOccupied, tSquare);  // Queen
         case 7: return kingAttacks(tSquare);   // King
         }
-        return 0;
+        return 0ULL;
     }
 
 private:

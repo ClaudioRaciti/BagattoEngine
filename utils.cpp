@@ -36,7 +36,7 @@ void initPopCount256()
 int popCount(uint64_t bitBoard)
 {
     if (!_isPopCountInit) initPopCount256();
-    uint8_t *p = (uint8_t *) &bitBoard;
+    const uint8_t* p = reinterpret_cast<uint8_t *>(&bitBoard);
     return  _popCount256[p[0]] + 
             _popCount256[p[1]] +
             _popCount256[p[2]] +

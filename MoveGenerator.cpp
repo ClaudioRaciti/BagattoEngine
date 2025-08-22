@@ -3,6 +3,7 @@
 #include "Move.hpp"
 #include "notation.hpp"
 #include "utils.hpp"
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -157,45 +158,45 @@ void MoveGenerator::castles(std::vector<Move> &tList, const Board &tBoard) const
     uint64_t emptySet = ~(tBoard.getBitboard(black) | tBoard.getBitboard(white));
 
     if (tBoard.getSideToMove() == white){
-        static constexpr uint64_t longCastleSquares = (uint64_t) 0x000000000000000e;
-        static constexpr uint64_t shortCastleSquares = (uint64_t) 0x0000000000000060;
+        static constexpr uint64_t longCastleSquares = uint64_t(0x000000000000000e);
+        static constexpr uint64_t shortCastleSquares = uint64_t(0x0000000000000060);
         uint64_t intersection = longCastleSquares & emptySet;
         if(
             tBoard.getLongCastle(white) &&
             (intersection == longCastleSquares) &&
-            ! isSquareAttacked(tBoard, c1, black) &&
-            ! isSquareAttacked(tBoard, d1, black) &&
-            ! isSquareAttacked(tBoard, e1, black)
+            ! isAttacked(tBoard, c1, black) &&
+            ! isAttacked(tBoard, d1, black) &&
+            ! isAttacked(tBoard, e1, black)
         ) tList.emplace_back(Move(e1, c1, queenCastle));
         
         intersection = shortCastleSquares & emptySet; 
         if(
             tBoard.getShortCastle(white) &&
             (intersection == shortCastleSquares) &&
-            ! isSquareAttacked(tBoard, e1, black) &&
-            ! isSquareAttacked(tBoard, f1, black) &&
-            ! isSquareAttacked(tBoard, g1, black)
+            ! isAttacked(tBoard, e1, black) &&
+            ! isAttacked(tBoard, f1, black) &&
+            ! isAttacked(tBoard, g1, black)
         ) tList.emplace_back(Move(e1, g1, kingCastle));
     }
     else{
-        static constexpr uint64_t longCastleSquares = (uint64_t) 0x0e00000000000000;
-        static constexpr uint64_t shortCastleSquares = (uint64_t) 0x6000000000000000;
+        static constexpr uint64_t longCastleSquares = uint64_t(0x0e00000000000000);
+        static constexpr uint64_t shortCastleSquares = uint64_t(0x6000000000000000);
         uint64_t intersection = longCastleSquares & emptySet; 
         if(
             tBoard.getLongCastle(black) &&
             (intersection == longCastleSquares) &&
-            ! isSquareAttacked(tBoard, c8, white) &&
-            ! isSquareAttacked(tBoard, d8, white) &&
-            ! isSquareAttacked(tBoard, e8, white)
+            ! isAttacked(tBoard, c8, white) &&
+            ! isAttacked(tBoard, d8, white) &&
+            ! isAttacked(tBoard, e8, white)
         ) tList.emplace_back(Move(e8, c8, queenCastle));
 
         intersection = shortCastleSquares & emptySet;
         if(
             tBoard.getShortCastle(black) &&
             (intersection == shortCastleSquares) &&
-            ! isSquareAttacked(tBoard, e8, white) &&
-            ! isSquareAttacked(tBoard, f8, white) &&
-            ! isSquareAttacked(tBoard, g8, white)
+            ! isAttacked(tBoard, e8, white) &&
+            ! isAttacked(tBoard, f8, white) &&
+            ! isAttacked(tBoard, g8, white)
         ) tList.emplace_back(Move(e8, g8, kingCastle));
     }
 }
@@ -227,7 +228,7 @@ void MoveGenerator::enPassants(uint64_t tTarget, std::vector<Move> &tList, const
     }
 }
 
-bool MoveGenerator::isSquareAttacked(const Board &tBoard, int tSquare, int tAttackingSide) const
+bool MoveGenerator::isAttacked(const Board &tBoard, int tSquare, int tAttackingSide) const
 {
     uint64_t occupied = tBoard.getBitboard(white) | tBoard.getBitboard(black);
     uint64_t pawnsSet = tBoard.getBitboard(pawn) & tBoard.getBitboard(tAttackingSide);
@@ -237,6 +238,68 @@ bool MoveGenerator::isSquareAttacked(const Board &tBoard, int tSquare, int tAtta
     for (int piece = knight; piece <= king; piece ++){
         uint64_t pieceSet = tBoard.getBitboard(piece) & tBoard.getBitboard(tAttackingSide);
         if((mLookup.getAttacks(piece, tSquare, occupied) & pieceSet) != 0) return true;
+    } 
+
+    return false;
+}
+
+bool MoveGenerator::isPseudoLegal(const Board& tBoard,const Move tMove) const {
+    int moved = tBoard.searchPiece(tMove.from());
+
+    if (moved == pawn){
+        // Insures that ep is available and the right file is used
+        if (tMove.isEnPassant())
+            return tBoard.getEpState() && (tBoard.getEpSquare()%8 == tMove.to()%8);
+
+        int stm = tBoard.getSideToMove();
+        uint64_t moveMask = uint64_t(1) << tMove.to();
+
+        // Insures pawns capture according to their attack pattern and move_to square is occupied
+        if (tMove.isCapture())
+            return (mLookup.pawnAttacks(tMove.from(), stm) & moveMask) && tBoard.searchPiece(tMove.to());
+    
+        // Insures pawns don't push trough existing pieces
+        uint64_t emptySet = ~(tBoard.getBitboard(white) | tBoard.getBitboard(black));
+        uint64_t moveSet  = uint64_t(1) << tMove.from();
+        moveSet  = (stm == white ? moveSet << 8 : moveSet >> 8) & emptySet;
+
+        if (tMove.isDoublePush()) // move_to square correctness doesn't need to be checked
+            return (stm == white ? moveSet << 8 : moveSet >> 8) & emptySet;
+        
+        return moveSet & moveMask; // Checks move_to square correnctess
+    }
+
+    if (moved != 0){
+        if (tMove.isPromo() || tMove.isEnPassant() || tMove.isDoublePush())
+            return false; // These flags are pawn exclusive
+        
+        static constexpr std::array<uint64_t, 4> castleSets = {
+            uint64_t(0x0000000000000060), uint64_t(0x000000000000000e),
+            uint64_t(0x6000000000000000), uint64_t(0x0e00000000000000)
+        };
+        int stm = tBoard.getSideToMove();
+        uint64_t occupied   = tBoard.getBitboard(white) | tBoard.getBitboard(black);
+        uint64_t castleMask = castleSets[(tMove.flag() - kingCastle) + (2 * stm)];
+
+        auto isKingSafe = [&] (uint64_t mask) {
+            do {
+                int square = bitScanForward(mask);
+                if (isAttacked(tBoard, square, stm))
+                    return false;
+            } while (mask &= (mask - 1));
+            return true;
+        };
+
+        if (tMove.isCastle()) 
+            return (castleMask & ~occupied) && isKingSafe(castleMask);
+
+        // Insures pieces move according to their attack patterns
+        uint64_t attackSet = mLookup.getAttacks(moved, tMove.from(), occupied);
+        uint64_t moveMask  = uint64_t(1) << tMove.to();
+        bool captureFound  = tBoard.searchPiece(tMove.to());
+
+        // Checks that move_to square is occupied iff move is capture
+        return (attackSet & moveMask) && (tMove.isCapture() == captureFound);
     } 
 
     return false;
