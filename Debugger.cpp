@@ -1,7 +1,4 @@
 #include "Debugger.hpp"
-#include <iostream>
-#include "utils.hpp"
-
 
 uint64_t Debugger::getPerft(int tDepth)
 {
@@ -12,7 +9,7 @@ uint64_t Debugger::getPerft(int tDepth)
 
     std::vector<Move> moveList;
     moveList.reserve(256);
-    if(isCheck()) mMoveGenerator.evadeChecks(mBoard, moveList);
+    if(isCheck()) mMoveGenerator.evasions(mBoard, moveList);
     else mMoveGenerator.all(mBoard, moveList);
 
     for (auto move : moveList) {

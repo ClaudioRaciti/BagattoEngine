@@ -17,18 +17,34 @@ struct TTEntry{
 };
 
 class TT {
-private:
-
-    size_t mSize;                             // Fixed size of the hash table
-    TTEntry* mTable;                            // Fixed-size vector of optional entries
-
 public:
     // Constructor
     explicit TT(int sizeMB);
     ~TT();
-
-    // Insert a key-value pair (overwriting on collision)
+    
+    /**
+     * @brief Drops the current table and allocates a new one of given size
+     * 
+     * @param sizeMB New size of the hash table in MB
+     */
     void resize(int sizeMB);
+
+    /**
+     * @brief Inserts an entry
+     * 
+     * @param tEntry Position information as specified in the designated struct
+     */
     void insert(TTEntry tEntry);
+
+    /**
+     * @brief Probes the hash table and returns an entry
+     * 
+     * @param tKey Zobrist hash key
+     * @return std::tuple<bool, TTEntry> composed of the truth value for probe hit and a TTEntry
+     */
     std::tuple<bool, TTEntry> probe(uint64_t tKey);
+
+private:
+    size_t mSize;    // Fixed size of the hash table
+    TTEntry* mTable; // Fixed-size vector of optional entries
 };

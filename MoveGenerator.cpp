@@ -16,15 +16,6 @@ void MoveGenerator::generate(uint64_t tTarget, const Board& tBoard, std::vector<
     castles(tList, tBoard);
 }
 
-void MoveGenerator::evadeChecks(const Board &tBoard, std::vector<Move> &tList) const
-{
-    int kingSquare = tBoard.getKingSquare(tBoard.getSideToMove());
-    uint64_t occupied = tBoard.getBitboard(white) | tBoard.getBitboard(black);
-    uint64_t target = mLookup.getAttacks(queen, kingSquare, occupied) | mLookup.getAttacks(knight, kingSquare, occupied);
-
-    generate(target, tBoard, tList);
-}
-
 void MoveGenerator::pieceMoves(uint64_t tTarget, int tPiece, std::vector<Move> &tList, const Board &tBoard) const
 {
     uint64_t pieceSet = tBoard.getBitboard(tPiece) & tBoard.getBitboard(tBoard.getSideToMove());
@@ -243,7 +234,7 @@ bool MoveGenerator::isAttacked(const Board &tBoard, int tSquare, int tAttackingS
     return false;
 }
 
-bool MoveGenerator::isPseudoLegal(const Board& tBoard,const Move tMove) const {
+bool MoveGenerator::validate(const Board& tBoard,const Move tMove) const {
     int moved = tBoard.searchPiece(tMove.from());
 
     if (moved == pawn){

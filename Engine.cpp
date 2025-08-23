@@ -180,7 +180,7 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
         return false;
     };
 
-    if (ttHit && mGenerator.isPseudoLegal(mBoard, ttEntry.hashMove)){
+    if (ttHit && mGenerator.validate(mBoard, ttEntry.hashMove)){
         searchMove(ttEntry.hashMove);
         if (failsHigh(ttEntry.hashMove, ttEntry.depht))
             return bestScore;
@@ -236,7 +236,7 @@ int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
 
     if (isCheck()){
         bestScore = CHECKMATE;
-        mGenerator.evadeChecks(mBoard, moveList);
+        mGenerator.evasions(mBoard, moveList);
     }
     else{
         bestScore = standPat;
@@ -244,10 +244,10 @@ int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
             tAlpha = bestScore; 
             if(tAlpha >= tBeta) return bestScore;
         }
-        else if(bestScore + (promoThreat() ? 1800 : 1000) < tAlpha) return bestScore;
+        else if(bestScore + (promoThreat() ? 1800 : 1000) < tAlpha) 
+            return bestScore;
 
-        uint64_t enemySet = mBoard.getBitboard(1 - mBoard.getSideToMove());
-        mGenerator.generate(enemySet, mBoard, moveList);
+        mGenerator.captures(mBoard, moveList);
         std::sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
             if (m1.isEnPassant()) return false;
             else if (m2.isEnPassant()) return true;

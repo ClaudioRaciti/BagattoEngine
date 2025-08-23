@@ -14,26 +14,43 @@
 
 class Engine
 {
-private:
-    const MoveGenerator mGenerator;
-    std::vector<std::array<Move, 2>> mKillers;
-    std::vector<uint64_t> mGameHist;
-    TT mTT;
-    Board mBoard;
-    uint64_t mSearchedNodes;
-    SearchLimits mLimits;
-
-    std::atomic<bool> mGoSearch = false;
-    std::thread mThread;
-    std::mutex mEngineMutex;
 public:
     Engine(): mTT{1}, mBoard{Board(STARTPOS)} {}
     ~Engine() {stopSearch();}
+
+    /**
+     * @brief Changes the transposition table size to the given dimension 
+     * 
+     * @param sizeMB The new size in MB
+     */
     void resizeTT(int sizeMB);
+
+    /**
+     * @brief Sets the starting position to the given one
+     * 
+     * @param tPosition FEN for the desired starting position
+     */
     void setPos(std::string tPosition);
+
+    /**
+     * @brief Updates the starting position
+     * 
+     * @param tMove Legal move to make from the starting position
+     */
     void makeMove(std::string tMove);
+
+    /**
+     * @brief Starts the search
+     * 
+     * @param tLimits Search parameters as per SearchLimits specification
+     */
     void goSearch(SearchLimits tLimits);
+    
+    /**
+     * @brief Interrupts the search ASAP
+     */
     void stopSearch();    
+
 private:
     void mainSearch(int tDepht);
     void printSearchInfo(int tMaxDepth, int64_t tElapsed, int16_t tEval, std::vector<Move> &tPV);
@@ -47,5 +64,18 @@ private:
     bool threefoldRepetition();
     bool fiftyMove();
     bool exitSearch();
+
+private:
+    const MoveGenerator mGenerator;
+    std::vector<std::array<Move, 2>> mKillers;
+    std::vector<uint64_t> mGameHist;
+    TT mTT;
+    Board mBoard;
+    uint64_t mSearchedNodes;
+    SearchLimits mLimits;
+
+    std::atomic<bool> mGoSearch = false;
+    std::thread mThread;
+    std::mutex mEngineMutex;
 };
 
