@@ -11,7 +11,6 @@ add_executable(
     Move.hpp 
     Move.cpp 
     utils.hpp 
-    utils.cpp 
     MoveGenerator.hpp
     MoveGenerator.cpp
     MagicBitboards.hpp

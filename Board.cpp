@@ -2,7 +2,6 @@
 #include "notation.hpp"
 #include "utils.hpp"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <ostream>
 #include <string>
@@ -12,14 +11,11 @@
 
 
 
-Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()}{
-    struct pieceColor{
-        int piece;
-        int color;
-    };
+Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()} {
+    struct PieceColor { int pieceType; int pieceColor; };
 
-    static constexpr std::array<pieceColor, 128> pieceColorMap = [] {
-        std::array<pieceColor, 128> map {};
+    static constexpr std::array<PieceColor, 128> pieceColorMap = [] {
+        std::array<PieceColor, 128> map {};
         auto insert = [&] (char c, int piece, int color) {
             map[static_cast<unsigned char>(c)] = {piece, color};
         };
@@ -29,53 +25,56 @@ Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()}{
         insert('R', rook,   white); insert('r', rook,   black);
         insert('Q', queen,  white); insert('q', queen,  black);
         insert('K', king,   white); insert('k', king,   black);
-
         return map;
     }();
 
-    std::vector<std::string> fields = split(tFEN, ' ');
-    std::string pieceSquare = fields[0];
-    std::string activeColor = fields[1];
-    std::string castlingRights = fields[2];
-    std::string epSquare = fields[3];
-    std::string halfmoveClock = fields.size() < 5 ? "0" : fields[4];
+    // Parse FEN fields
+    std::istringstream fenStream(tFEN);
+    std::string fenPiecePlacement, fenActiveColor, fenCastlingRights, fenEpSquare;
+    int fenHalfmoveClock = 0;
 
+    fenStream >> fenPiecePlacement >> fenActiveColor >> fenCastlingRights >> fenEpSquare;
+    if (!(fenStream >> fenHalfmoveClock)) fenHalfmoveClock = 0;
+
+    // Initialize state
     mStateHist.emplace_back(uint32_t(0x0));
-
-    // Set bitboards to zero
     std::fill(std::begin(mBitboards), std::end(mBitboards), 0ULL);
 
-    // Setup bitboards:
-    std::vector<std::string> boardSquares = split(pieceSquare, '/');
-    for (int rank = 0; rank <8; rank++){
-        int file = 0;
-        for (char c : boardSquares[7 - rank]){
-            if (isdigit(c)){
-                file += c - '0';
+    // Setup bitboards
+    std::istringstream piecePlacementStream(fenPiecePlacement);
+    std::string fenRankString;
+
+    for (int rankIndex = 0; rankIndex < 8; ++rankIndex) {
+        getline(piecePlacementStream, fenRankString, '/');
+        int fileIndex = 0;
+        for (char c : fenRankString) {
+            if (isdigit(c)) {
+                fileIndex += c - '0';
                 continue;
             }
-            int sq = (rank * 8) + file++;
-            auto [piece, color] = pieceColorMap[static_cast<unsigned char>(c)];
+            int squareIndex = (7 - rankIndex) * 8 + fileIndex++;
+            auto [piece, pieceColor] = pieceColorMap[static_cast<unsigned char>(c)];
             assert(piece);
-            uint64_t mask = 1ULL << sq;
-            mBitboards[piece] |= mask;
-            mBitboards[color] |= mask;
-            mKey ^= mZobrist.getPieceKey(color, piece, sq);
+            uint64_t squareMask = 1ULL << squareIndex;
+            mBitboards[piece] |= squareMask;
+            mBitboards[pieceColor] |= squareMask;
+            mKey ^= mZobrist.getPieceKey(pieceColor, piece, squareIndex);
         }
     }
 
+    // King positions
     setKingSquare(white, bitScanForward(mBitboards[king] & mBitboards[white]));
     setKingSquare(black, bitScanForward(mBitboards[king] & mBitboards[black]));
 
-    // Set side to move
-    if (activeColor[0] != 'w') {
+    // Side to move
+    if (fenActiveColor[0] != 'w') {
         toggleSideToMove();
         mKey ^= mZobrist.getSTMKey();
     }
 
-    // Set castling rights
-    for (char c : castlingRights){ 
-        switch (c){
+    // Castling rights
+    for (char c : fenCastlingRights) {
+        switch (c) {
         case 'k': mStateHist.back() |= uint32_t(1) << 2; break;
         case 'q': mStateHist.back() |= uint32_t(1) << 4; break;
         case 'K': mStateHist.back() |= uint32_t(1) << 1; break;
@@ -83,21 +82,21 @@ Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()}{
         }
     }
     mKey ^= mZobrist.getCastleKey(getCastles());
-    
-    // Set ep square
-    if (epSquare.compare("-") != 0) {
-        setEpSquare(epSquare[0] - 'a' + 8 * (1 - getSideToMove()));
-        mKey ^= mZobrist.getEPKey(getEpSquare()%8); 
+
+    // En passant square
+    if (fenEpSquare != "-") {
+        setEpSquare(fenEpSquare[0] - 'a' + 8 * (1 - getSideToMove()));
+        mKey ^= mZobrist.getEPKey(getEpSquare() % 8); 
     }
 
-    // Set HMC
-    int hmc = std::stoi(halfmoveClock);
-    mStateHist.back() |= (hmc & 0x7f) << 25;
+    // Halfmove clock
+    mStateHist.back() |= (fenHalfmoveClock & 0x7f) << 25;
 
-    // Set material count
+    // Material count
     mMaterialCount = 0;
-    static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
-    for (int piece = pawn; piece < king; piece ++) mMaterialCount += popCount(mBitboards[piece]) * pieceVal[piece];
+    static constexpr int16_t pieceValue[7] = {0, 0, 100, 300, 300, 500, 1000};
+    for (int piece = pawn; piece < king; ++piece)
+        mMaterialCount += popCount(mBitboards[piece]) * pieceValue[piece];
 }
 
 Board::Board(const Board &tOther) : 

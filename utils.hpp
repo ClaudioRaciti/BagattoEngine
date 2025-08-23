@@ -1,10 +1,127 @@
 #pragma once
 
-#include <vector>
 #include <cstdint>
-#include <string>
 #include <chrono>
+#include <cassert>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#elif !(defined(__GNUC__) || defined(__clang__))
+#include <array>
+#endif
+
+/**
+ * @brief Returns index of the least significant active (1) bit
+ * 
+ * @param bitBoard Board rapresentation as unsigned long long
+ * @return int Index of the LSB
+ */
+inline int bitScanForward(uint64_t bitBoard){
+#if defined (_MSC_VER) 
+    unsigned long index;
+    assert(_BitScanForward64(&index, bitBoard));
+    return static_cast<int>(index);
+#elif  defined (__GNUC__) || defined (__clang__)
+    assert (bitBoard != 0);
+    return __builtin_ctzll(bitBoard);
+#else
+    //Reference table for bitscans
+    static constexpr std::array<int,64> index64 = {
+         0, 47,  1, 56, 48, 27,  2, 60,
+        57, 49, 41, 37, 28, 16,  3, 61,
+        54, 58, 35, 52, 50, 42, 21, 44,
+        38, 32, 29, 23, 17, 11,  4, 62,
+        46, 55, 26, 59, 40, 36, 15, 53,
+        34, 51, 20, 43, 31, 22, 10, 45,
+        25, 39, 14, 33, 19, 30,  9, 24,
+        13, 18,  8, 12,  7,  6,  5, 63
+    };
+    static constexpr uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
+    assert (bitBoard != 0);
+    return index64[((bitBoard ^ (bitBoard-1)) * deBrujin64) >> 58];
+#endif
+}
+
+/**
+ * @brief Returns index of the most significant active (1) bit
+ * 
+ * @param bitBoard Board rapresentation as unsigned long long
+ * @return int Index of the MSB
+ */
+inline int bitScanReverse(uint64_t bitBoard){
+#if defined (_MSC_VER) 
+    unsigned long index;
+    assert(_BitScanReverse64(&index, bitBoard));
+    return static_cast<int>(index);
+#elif  defined (__GNUC__) || defined (__clang__)
+    assert (bitBoard != 0);
+    return __builtin_clzll(bitBoard);
+#else
+    // Reference table for bitscans
+    static constexpr std::array<int,64> index64 = {
+         0, 47,  1, 56, 48, 27,  2, 60,
+        57, 49, 41, 37, 28, 16,  3, 61,
+        54, 58, 35, 52, 50, 42, 21, 44,
+        38, 32, 29, 23, 17, 11,  4, 62,
+        46, 55, 26, 59, 40, 36, 15, 53,
+        34, 51, 20, 43, 31, 22, 10, 45,
+        25, 39, 14, 33, 19, 30,  9, 24,
+        13, 18,  8, 12,  7,  6,  5, 63
+    };
+    static constexpr uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
+    assert (bitBoard != 0);
+    bitBoard |= bitBoard >> 1;
+    bitBoard |= bitBoard >> 2;
+    bitBoard |= bitBoard >> 4;
+    bitBoard |= bitBoard >> 8;
+    bitBoard |= bitBoard >> 16;
+    bitBoard |= bitBoard >> 32;
+    return index64[(bitBoard * deBrujin64) >> 58];
+#endif
+}
+
+/**
+ * @brief Returns the total number of active (1) bits
+ * 
+ * @param bitBoard Board rapresentation as unsigned long long
+ * @return int active bits count
+ */
+inline int popCount(uint64_t bitBoard){
+#if defined (_MSC_VER)
+    return static_cast<int>(__popcnt64(bitBoard));
+#elif  defined (__GNUC__) || defined (__clang__)
+    return __builtin_popcountll(bitBoard);
+#else
+    static constexpr std::array<int, 256> _popCount256 = [] {
+        std::array<int, 256> a {};
+        a[0] = 0;
+        for(int i = 1; i < 256; i ++)
+            a[i] = a[i / 2] + (i & 1);
+        return a;
+    } ();
+    const uint8_t* p = reinterpret_cast<uint8_t *>(&bitBoard);
+    return  _popCount256[p[0]] + _popCount256[p[1]] + _popCount256[p[2]] + _popCount256[p[3]] +
+            _popCount256[p[4]] + _popCount256[p[5]] + _popCount256[p[6]] + _popCount256[p[7]];
+#endif
+}
+
+// Bit TWiddling functions
+constexpr void wrapNort (uint64_t &bitBoard) {bitBoard <<= 8;}
+constexpr void wrapSout (uint64_t &bitBoard) {bitBoard >>= 8;}
+constexpr void wrapEast (uint64_t &bitBoard) {
+    constexpr uint64_t mask = uint64_t(0x7f7f7f7f7f7f7f7f); 
+    bitBoard &= mask; 
+    bitBoard <<= 1;
+}
+constexpr void wrapWest (uint64_t &bitBoard) {
+    constexpr uint64_t mask = uint64_t(0xfefefefefefefefe);
+    bitBoard &= mask;
+    bitBoard >>= 1;
+}
+constexpr uint64_t cpyWrapNort (uint64_t bitBoard) {wrapNort(bitBoard); return bitBoard;}
+constexpr uint64_t cpyWrapSout (uint64_t bitBoard) {wrapSout(bitBoard); return bitBoard;}
+constexpr uint64_t cpyWrapEast (uint64_t bitBoard) {wrapEast(bitBoard); return bitBoard;}
+constexpr uint64_t cpyWrapWest (uint64_t bitBoard) {wrapWest(bitBoard); return bitBoard;}
 
 // Time variables
 using TimePoint = std::chrono::milliseconds::rep;  // A value in milliseconds
@@ -25,27 +142,3 @@ struct SearchLimits
     TimePoint time[2], inc[2];
 };
 
-// Bit TWiddling functions
-constexpr void wrapNort (uint64_t &bitBoard) {bitBoard <<= 8;}
-constexpr void wrapSout (uint64_t &bitBoard) {bitBoard >>= 8;}
-constexpr void wrapEast (uint64_t &bitBoard) {constexpr uint64_t mask = uint64_t(0x7f7f7f7f7f7f7f7f); bitBoard &= mask; bitBoard <<= 1;}
-constexpr void wrapWest (uint64_t &bitBoard) {constexpr uint64_t mask = uint64_t(0xfefefefefefefefe); bitBoard &= mask; bitBoard >>= 1;}
-constexpr uint64_t cpyWrapNort (uint64_t bitBoard) {wrapNort(bitBoard); return bitBoard;}
-constexpr uint64_t cpyWrapSout (uint64_t bitBoard) {wrapSout(bitBoard); return bitBoard;}
-constexpr uint64_t cpyWrapEast (uint64_t bitBoard) {wrapEast(bitBoard); return bitBoard;}
-constexpr uint64_t cpyWrapWest (uint64_t bitBoard) {wrapWest(bitBoard); return bitBoard;}
-int bitScanReverse (uint64_t bitBoard);
-int bitScanForward (uint64_t bitBoard);
-
-// Population count functions
-void initPopCount256();
-int popCount(uint64_t bitBoard);
-
-// String manipulation functions
-std::vector<std::string> split (const std::string &string, char delim);
-bool is_number(const std::string& s);
-
-// Hashing functions
-// MurmurHash3Mixer 
-constexpr uint64_t hash64(uint64_t key){key = ((key >> 33) ^ key) * 0xff51afd7ed558ccd; key = ((key >> 33) ^ key) * 0xc4ceb9fe1a85ec53; return key ^ (key >>33);}
-constexpr uint32_t hash32(uint32_t key){key = ((key >> 16) ^ key) * 0x45d9f3b; key = ((key >> 16) ^ key) * 0x45d9f3b; return key ^ (key >>16);}
