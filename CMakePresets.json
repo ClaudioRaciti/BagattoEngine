@@ -1,17 +1,74 @@
 {
-    "version": 8,
-    "configurePresets": [
-        {
-            "name": "GCC 13.2.0 x86_64-linux-gnu",
-            "displayName": "GCC 13.2.0 x86_64-linux-gnu",
-            "description": "Using compilers: C = /usr/bin/gcc, CXX = /usr/bin/g++",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "cacheVariables": {
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_C_COMPILER": "/usr/bin/gcc",
-                "CMAKE_CXX_COMPILER": "/usr/bin/g++",
-                "CMAKE_BUILD_TYPE": "Debug"
-            }
-        }
-    ]
+  "version": 8,
+  "configurePresets": [
+    {
+      "name": "GCC-Debug",
+      "displayName": "GCC 13.2.0 Debug (Linux)",
+      "description": "GCC Debug build on Linux",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/usr/bin/gcc",
+        "CMAKE_CXX_COMPILER": "/usr/bin/g++",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+      }
+    },
+    {
+      "name": "GCC-Release",
+      "displayName": "GCC 13.2.0 Release (Linux)",
+      "description": "GCC Release build on Linux",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/usr/bin/gcc",
+        "CMAKE_CXX_COMPILER": "/usr/bin/g++",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+      }
+    },
+    {
+      "name": "MSVC-Debug",
+      "displayName": "MSVC 2022 Debug (Windows)",
+      "description": "Visual Studio 2022 Debug build",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+      }
+    },
+    {
+      "name": "MSVC-Release",
+      "displayName": "MSVC 2022 Release (Windows)",
+      "description": "Visual Studio 2022 Release build",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "GCC-Debug-Build",
+      "configurePreset": "GCC-Debug"
+    },
+    {
+      "name": "GCC-Release-Build",
+      "configurePreset": "GCC-Release"
+    },
+    {
+      "name": "MSVC-Debug-Build",
+      "configurePreset": "MSVC-Debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "MSVC-Release-Build",
+      "configurePreset": "MSVC-Release",
+      "configuration": "Release"
+    }
+  ]
 }

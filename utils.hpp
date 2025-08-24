@@ -17,12 +17,12 @@
  * @return int Index of the LSB
  */
 inline int bitScanForward(uint64_t bitBoard){
+    assert (bitBoard != 0);
 #if defined (_MSC_VER) 
     unsigned long index;
-    assert(_BitScanForward64(&index, bitBoard));
+    _BitScanForward64(&index, bitBoard);
     return static_cast<int>(index);
 #elif  defined (__GNUC__) || defined (__clang__)
-    assert (bitBoard != 0);
     return __builtin_ctzll(bitBoard);
 #else
     //Reference table for bitscans
@@ -37,7 +37,6 @@ inline int bitScanForward(uint64_t bitBoard){
         13, 18,  8, 12,  7,  6,  5, 63
     };
     static constexpr uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
-    assert (bitBoard != 0);
     return index64[((bitBoard ^ (bitBoard-1)) * deBrujin64) >> 58];
 #endif
 }
@@ -49,12 +48,12 @@ inline int bitScanForward(uint64_t bitBoard){
  * @return int Index of the MSB
  */
 inline int bitScanReverse(uint64_t bitBoard){
+    assert (bitBoard != 0);
 #if defined (_MSC_VER) 
     unsigned long index;
-    assert(_BitScanReverse64(&index, bitBoard));
+    _BitScanReverse64(&index, bitBoard);
     return static_cast<int>(index);
 #elif  defined (__GNUC__) || defined (__clang__)
-    assert (bitBoard != 0);
     return __builtin_clzll(bitBoard);
 #else
     // Reference table for bitscans
@@ -69,7 +68,6 @@ inline int bitScanReverse(uint64_t bitBoard){
         13, 18,  8, 12,  7,  6,  5, 63
     };
     static constexpr uint64_t deBrujin64 = uint64_t(0x03f79d71b4cb0a89);
-    assert (bitBoard != 0);
     bitBoard |= bitBoard >> 1;
     bitBoard |= bitBoard >> 2;
     bitBoard |= bitBoard >> 4;

@@ -143,7 +143,7 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
         mBoard.makeMove(move);
         mGameHist.emplace_back(mBoard.getHash());
         if(!isIllegal()){
-            int16_t score;
+            int16_t score = CHECKMATE;
             // zero-window search if alpha has already been raised
             if (bestNodeType == pvNode)
                 score = -alphaBeta(tDepth - 1, -tAlpha - 1, -tAlpha, line);

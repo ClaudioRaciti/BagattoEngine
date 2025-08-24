@@ -264,13 +264,8 @@ bool MoveGenerator::validate(const Board& tBoard,const Move tMove) const {
         if (tMove.isPromo() || tMove.isEnPassant() || tMove.isDoublePush())
             return false; // These flags are pawn exclusive
         
-        static constexpr std::array<uint64_t, 4> castleSets = {
-            uint64_t(0x0000000000000060), uint64_t(0x000000000000000e),
-            uint64_t(0x6000000000000000), uint64_t(0x0e00000000000000)
-        };
         int stm = tBoard.getSideToMove();
         uint64_t occupied   = tBoard.getBitboard(white) | tBoard.getBitboard(black);
-        uint64_t castleMask = castleSets[(tMove.flag() - kingCastle) + (2 * stm)];
 
         auto isKingSafe = [&] (uint64_t mask) {
             do {
@@ -281,9 +276,15 @@ bool MoveGenerator::validate(const Board& tBoard,const Move tMove) const {
             return true;
         };
 
-        if (tMove.isCastle()) 
+        if (tMove.isCastle()) {
+            static constexpr std::array<uint64_t, 4> castleSets = {
+                uint64_t(0x0000000000000060), uint64_t(0x000000000000000e),
+                uint64_t(0x6000000000000000), uint64_t(0x0e00000000000000)
+            };
+            uint64_t castleMask = castleSets[(tMove.flag() - kingCastle) + (2 * stm)];
             return (castleMask & ~occupied) && isKingSafe(castleMask);
-
+        }
+        
         // Insures pieces move according to their attack patterns
         uint64_t attackSet = mLookup.getAttacks(moved, tMove.from(), occupied);
         uint64_t moveMask  = uint64_t(1) << tMove.to();

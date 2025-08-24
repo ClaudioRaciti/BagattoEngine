@@ -201,8 +201,8 @@ void Board::makeMove(const Move &tMove)
         std::array<uint32_t, 64> a {};
 
         auto fillArray = [&](int square){
-            uint32_t epMask = ~(0x1f << 5);
-            uint32_t capturedMask = ~(0x7 << 10);
+            uint32_t epMask = ~(0x1fu << 5);
+            uint32_t capturedMask = ~(0x7u << 10);
 
             a[square] = UINT32_MAX & epMask & capturedMask;
 
@@ -221,6 +221,9 @@ void Board::makeMove(const Move &tMove)
     mStateHist.emplace_back(mStateHist.back());
     mStateHist.back() &= stateMask[from] & stateMask[to];
     incrementHMC();
+    static constexpr std::array<int, 2> KCoffset = {a1, a8}; //adds eight rank values only if stm is black
+    static constexpr std::array<int, 2> QCoffset = {a1, a8}; //adds eight rank values only if stm is black
+    static constexpr std::array<int, 2> EPoffset = {-8, 8};
 
     switch (tMove.flag()){
     case quiet:
@@ -235,13 +238,11 @@ void Board::makeMove(const Move &tMove)
         resetHMC();
         break;
     case kingCastle:
-        static constexpr int KCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
         movePiece(stm, king, from, to);
         movePiece(stm, rook, h1 + KCoffset[stm], f1 + KCoffset[stm]); 
         setKingSquare(stm, to);
         break;
     case queenCastle:
-        static constexpr int QCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
         movePiece(stm, king, from, to);
         movePiece(stm, rook, a1 + QCoffset[stm], d1 + QCoffset[stm]); 
         setKingSquare(stm, to);
@@ -258,9 +259,8 @@ void Board::makeMove(const Move &tMove)
         resetHMC();
         break;
     case enPassant:
-        static constexpr int offset[2] = {-8, 8};
         movePiece(stm, pawn, from, to);
-        capturePiece(stm, pawn, to + offset[stm]);
+        capturePiece(stm, pawn, to + EPoffset[stm]);
         decreaseMaterialCount(pawn);
         setCaptured(pawn);
         resetHMC();
@@ -300,6 +300,9 @@ void Board::undoMove(const Move &tMove)
     int move_from = tMove.from();
     int move_to = tMove.to();
     int stm = getSideToMove();
+    static constexpr std::array<int, 2> KCoffset = {a1, a8}; //adds eight rank values only if stm is black
+    static constexpr std::array<int, 2> QCoffset = {a1, a8}; //adds eight rank values only if stm is black
+    static constexpr std::array<int, 2> EPoffset = {-8, 8};
 
     
     switch (tMove.flag()){
@@ -310,12 +313,10 @@ void Board::undoMove(const Move &tMove)
         movePiece(stm, pawn, move_from, move_to);
         break;
     case kingCastle:
-        static constexpr int KCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
         movePiece(stm, king, move_from, move_to);
         movePiece(stm, rook, h1 + KCoffset[stm], f1 + KCoffset[stm]); 
         break;
     case queenCastle:
-        static constexpr int QCoffset[2] = {a1, a8}; //adds eight rank values only if stm is black
         movePiece(stm, king, move_from, move_to);
         movePiece(stm, rook, a1 + QCoffset[stm], d1 + QCoffset[stm]); 
         break;
@@ -325,7 +326,6 @@ void Board::undoMove(const Move &tMove)
         increaseMaterialCount(getCaptured());
         break;
     case enPassant:
-        static constexpr int EPoffset[2] = {-8, 8}; //adds one rank offset depending on capturing side
         movePiece(stm, pawn, move_from, move_to);
         capturePiece(stm, pawn, move_to + EPoffset[stm]);
         increaseMaterialCount(pawn);
