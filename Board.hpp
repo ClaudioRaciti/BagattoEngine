@@ -20,8 +20,8 @@ public:
     inline friend std::ostream& operator<< (std::ostream& os, const Board& cb) {return os << cb.asString();}
     std::string asString() const;
     
+    
     inline uint64_t getBitboard(int tPiece) const {return mBitboards[tPiece];}   
-
 
     inline int  getSideToMove() const           {return mStateHist.back() & 0x1;}
     inline int  getCastles() const              {return (mStateHist.back() >> 1) & 0xf;}
@@ -33,8 +33,6 @@ public:
     inline int  getKingSquare (int tSide) const {return (mStateHist.back() >> (13 + 6 * tSide)) & 0x3f;}
     inline int  getHMC() const                  {return (mStateHist.back() >> 25) & 0x7f;} 
     inline int  getFMC() const                  {return (mStateHist.size() / 2);}
-
-    inline int getMaterialCount() const {return mMaterialCount;}
 
     inline uint64_t getHash() const {return mKey;}
 
@@ -60,21 +58,10 @@ private:
     inline void incrementHMC()                  {mStateHist.back() += 0x1 << 25;}
     inline void resetHMC()                      {mStateHist.back() &= ~(0x7f << 25);}
 
-    inline void decreaseMaterialCount(int tPiece) {
-        static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000};
-        mMaterialCount -= pieceVal[tPiece];
-    }
-    inline void increaseMaterialCount(int tPiece) {
-        static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000}; 
-        mMaterialCount += pieceVal[tPiece];
-    }
-
-
 private:
     std::array<uint64_t, 8> mBitboards;
     std::vector<uint32_t> mStateHist;
     uint64_t mKey = 0ULL;
-    int mMaterialCount;
 
     const Zobrist& mZobrist;
 

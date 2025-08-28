@@ -1,4 +1,5 @@
 #include "Engine.hpp"
+#include "Board.hpp"
 #include "Move.hpp"
 #include "MoveGenerator.hpp"
 #include "TT.hpp"
@@ -229,7 +230,7 @@ int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
     mSearchedNodes += 1;
 
     static constexpr int16_t pieceVal[7] = {0, 0, 100, 300, 300, 500, 1000}; 
-    int16_t standPat = (mBoard.getSideToMove() == white) ? evaluate(mBoard, gamePhase()) : -evaluate(mBoard, gamePhase());
+    int16_t standPat = evaluate(mBoard);
     int16_t bestScore;
     std::vector<Move> moveList;
     moveList.reserve(256);
@@ -271,15 +272,6 @@ int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
     }
 
     return bestScore;
-}
-
-int Engine::gamePhase()
-{
-    constexpr int mgMax = 100 * 16 + 300 * 8 + 500 * 4 + 1000 * 2;
-
-    const int material = (mgMax < mBoard.getMaterialCount()) ? mgMax : mBoard.getMaterialCount();
-
-    return (100 * material) / mgMax;
 }
 
 bool Engine::isIllegal()

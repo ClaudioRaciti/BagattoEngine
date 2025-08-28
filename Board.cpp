@@ -91,18 +91,11 @@ Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()} {
 
     // Halfmove clock
     mStateHist.back() |= (fenHalfmoveClock & 0x7f) << 25;
-
-    // Material count
-    mMaterialCount = 0;
-    static constexpr int16_t pieceValue[7] = {0, 0, 100, 300, 300, 500, 1000};
-    for (int piece = pawn; piece < king; ++piece)
-        mMaterialCount += popCount(mBitboards[piece]) * pieceValue[piece];
 }
 
 Board::Board(const Board &tOther) : 
     mBitboards{tOther.mBitboards}, 
     mKey(tOther.mKey) ,
-    mMaterialCount{tOther.mMaterialCount},
     mZobrist{Zobrist::getInstance()}
 {
     if(tOther.mStateHist.size())mStateHist.emplace_back(tOther.mStateHist.back());
@@ -112,7 +105,6 @@ Board &Board::operator=(const Board &tOther)
 {
     if(this != &tOther){
         mBitboards = tOther.mBitboards;
-        mMaterialCount = tOther.mMaterialCount;
         mKey = tOther.mKey;
         if(tOther.mStateHist.size())mStateHist.emplace_back(tOther.mStateHist.back());
     }

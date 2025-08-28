@@ -53,17 +53,19 @@ public:
 
 private:
     void mainSearch(int tDepht);
+    bool exitSearch();
+    
     void printSearchInfo(int tMaxDepth, int64_t tElapsed, int16_t tEval, std::vector<Move> &tPV);
     int16_t alphaBeta(int tDepht, int16_t tAlpha, int16_t tBeta, std::vector<Move> &tPV);
     int16_t quiescence(int16_t tAlpha, int16_t tBeta);
-    int gamePhase();
+
     bool isIllegal(); // opponent side is in check but its not his turn
     bool isCheck();   // opponent side gives check and its your turn
     bool promoThreat();
+
     bool hashUsageCondition(TTEntry tTTVal, int tDepht, int tAlpha, int tBeta);
     bool threefoldRepetition();
     bool fiftyMove();
-    bool exitSearch();
 
 private:
     const MoveGenerator mGenerator;
