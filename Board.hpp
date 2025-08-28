@@ -44,7 +44,6 @@ public:
     int searchPiece(int tSquare) const;
 
 private:
-    
     void movePiece(int tSTM, int tPiece, int tFrom, int tTo);
     void capturePiece(int tSTM, int tPiece, int tSquare);
     void promotePiece(int tSTM, int tPiece, int tFrom, int tTo);
