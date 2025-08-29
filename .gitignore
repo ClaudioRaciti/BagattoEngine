@@ -1,5 +1,7 @@
 /build/
 /out/
+/valgrind/
+/venv/
 CMakeFiles/
 CMakeCache.txt
 *.o

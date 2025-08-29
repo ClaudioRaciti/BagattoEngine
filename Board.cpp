@@ -255,6 +255,13 @@ void Board::makeMove(const Move &tMove)
         setCaptured(pawn);
         resetHMC();
         break;
+    case knightPromo:
+    case bishopPromo:
+    case rookPromo:
+    case queenPromo:
+        promotePiece(stm, tMove.promoPiece(), from, to);
+        resetHMC();
+        break;
     case knightPromoCapture:
     case bishopPromoCapture:
     case rookPromoCapture:
@@ -262,11 +269,6 @@ void Board::makeMove(const Move &tMove)
         captured = searchPiece(to);
         capturePiece(stm, captured, to);
         setCaptured(captured);
-        [[fallthrough]];
-    case knightPromo:
-    case bishopPromo:
-    case rookPromo:
-    case queenPromo:
         promotePiece(stm, tMove.promoPiece(), from, to);
         resetHMC();
         break;
@@ -315,16 +317,17 @@ void Board::undoMove(const Move &tMove)
         movePiece(stm, pawn, move_from, move_to);
         capturePiece(stm, pawn, move_to + EPoffset[stm]);
         break;
+    case knightPromo:
+    case bishopPromo:
+    case rookPromo:
+    case queenPromo:
+        promotePiece(stm, tMove.promoPiece(), move_from, move_to);
+        break;
     case knightPromoCapture:
     case bishopPromoCapture:
     case rookPromoCapture:
     case queenPromoCapture:
         capturePiece(stm, getCaptured(), move_to);
-        [[fallthrough]];
-    case knightPromo:
-    case bishopPromo:
-    case rookPromo:
-    case queenPromo:
         promotePiece(stm, tMove.promoPiece(), move_from, move_to);
         break;
     }

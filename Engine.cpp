@@ -193,7 +193,10 @@ int16_t Engine::alphaBeta(int tDepth, int16_t tAlpha, int16_t tBeta, std::vector
     mGenerator.captures(mBoard, captures);
 
     std::sort(captures.begin(), captures.end(),[&](const Move m1, const Move m2){
-        return mBoard.searchPiece(m1.to())>mBoard.searchPiece(m2.to());
+        return mBoard.searchPiece(m1.from()) < mBoard.searchPiece(m2.from());
+    });
+    std::stable_sort(captures.begin(), captures.end(),[&](const Move m1, const Move m2){
+        return mBoard.searchPiece(m1.to()) > mBoard.searchPiece(m2.to());
     });
     
     for(Move move : captures){
@@ -250,9 +253,10 @@ int16_t Engine::quiescence(int16_t tAlpha, int16_t tBeta)
 
         mGenerator.captures(mBoard, moveList);
         std::sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
-            if (m1.isEnPassant()) return false;
-            else if (m2.isEnPassant()) return true;
-            else return this->mBoard.searchPiece(m1.to()) > this->mBoard.searchPiece(m2.to());
+            return mBoard.searchPiece(m1.from()) < mBoard.searchPiece(m2.from());
+        });
+        std::stable_sort(moveList.begin(), moveList.end(), [this](const Move& m1, const Move& m2){
+            return mBoard.searchPiece(m1.to()) > mBoard.searchPiece(m2.to());
         });
     }
 
