@@ -39,12 +39,31 @@ public:
     void makeMove(const Move &tMove);
     void undoMove(const Move &tMove);
 
-    int searchPiece(int tSquare) const;
+    inline int searchPiece(int tSquare) const {return mPieceSquare[tSquare];}
 
 private:
-    void movePiece(int tSTM, int tPiece, int tFrom, int tTo);
-    void capturePiece(int tSTM, int tPiece, int tSquare);
-    void promotePiece(int tSTM, int tPiece, int tFrom, int tTo);
+    inline void movePiece(int tSTM, int tPiece, int tFrom, int tTo){
+        const uint64_t mask = 1ULL << tFrom | 1ULL << tTo;
+        mBitboards[tPiece] ^= mask;
+        mBitboards[tSTM]   ^= mask;
+        mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tFrom);
+        mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tTo);
+    }
+    inline void capturePiece(int tSTM, int tPiece, int tSquare){
+        const uint64_t mask = 1ULL << tSquare;
+        mBitboards[tPiece] ^= mask;
+        mBitboards[1-tSTM] ^= mask;
+        mKey ^= mZobrist.getPieceKey(1-tSTM, tPiece, tSquare);
+    }
+    inline void promotePiece(int tSTM, int tPiece, int tFrom, int tTo){
+        const uint64_t maskTo = 1ULL << tTo;
+        const uint64_t maskFrom = 1ULL << tFrom;
+        mBitboards[pawn]  ^= maskFrom;
+        mBitboards[tPiece] ^= maskTo;
+        mBitboards[tSTM]   ^= maskFrom | maskTo;
+        mKey ^= mZobrist.getPieceKey(tSTM, pawn, tFrom);
+        mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tTo);
+    }
 
     inline void toggleSideToMove()              {mStateHist.back() ^= 0x01; mKey ^= mZobrist.getSTMKey();}
     inline void removeShortCastle (int tSide)   {mStateHist.back() &= ~(0x1 << (tSide + 1));}
@@ -60,6 +79,7 @@ private:
 
 private:
     std::array<uint64_t, 8> mBitboards;
+    std::array<int, 64> mPieceSquare;
     std::vector<uint32_t> mStateHist;
     uint64_t mKey = 0ULL;
 

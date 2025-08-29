@@ -39,6 +39,7 @@ Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()} {
     // Initialize state
     mStateHist.emplace_back(uint32_t(0x0));
     std::fill(std::begin(mBitboards), std::end(mBitboards), 0ULL);
+    std::fill(std::begin(mPieceSquare), std::end(mPieceSquare), 0);
 
     // Setup bitboards
     std::istringstream piecePlacementStream(fenPiecePlacement);
@@ -58,6 +59,7 @@ Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()} {
             uint64_t squareMask = 1ULL << squareIndex;
             mBitboards[piece] |= squareMask;
             mBitboards[pieceColor] |= squareMask;
+            mPieceSquare[squareIndex] = piece;
             mKey ^= mZobrist.getPieceKey(pieceColor, piece, squareIndex);
         }
     }
@@ -95,6 +97,7 @@ Board::Board(std::string tFEN) : mZobrist{Zobrist::getInstance()} {
 
 Board::Board(const Board &tOther) : 
     mBitboards{tOther.mBitboards}, 
+    mPieceSquare(tOther.mPieceSquare),
     mKey(tOther.mKey) ,
     mZobrist{Zobrist::getInstance()}
 {
@@ -105,6 +108,7 @@ Board &Board::operator=(const Board &tOther)
 {
     if(this != &tOther){
         mBitboards = tOther.mBitboards;
+        mPieceSquare = tOther.mPieceSquare;
         mKey = tOther.mKey;
         if(tOther.mStateHist.size())mStateHist.emplace_back(tOther.mStateHist.back());
     }
@@ -183,9 +187,9 @@ void Board::makeMove(const Move &tMove)
     if (getEpState()) mKey ^= mZobrist.getEPKey(getEpSquare()%8);
 
     int piece, captured;
-    int from = tMove.from();
-    int to = tMove.to();
-    int stm = getSideToMove();
+    const int moveFrom = tMove.from();
+    const int moveTo   = tMove.to();
+    const int stm = getSideToMove();
 
     // ALWAYS removes captured piece, en-passant state and en-passant square
     // removes castling depending on the move type
@@ -211,7 +215,7 @@ void Board::makeMove(const Move &tMove)
     }();
 
     mStateHist.emplace_back(mStateHist.back());
-    mStateHist.back() &= stateMask[from] & stateMask[to];
+    mStateHist.back() &= stateMask[moveFrom] & stateMask[moveTo];
     incrementHMC();
     static constexpr std::array<int, 2> KCoffset = {a1, a8}; //adds eight rank values only if stm is black
     static constexpr std::array<int, 2> QCoffset = {a1, a8}; //adds eight rank values only if stm is black
@@ -219,39 +223,55 @@ void Board::makeMove(const Move &tMove)
 
     switch (tMove.flag()){
     case quiet:
-        piece = searchPiece(from);
-        movePiece(stm, piece, from, to);    
+        piece = searchPiece(moveFrom);
+        movePiece(stm, piece, moveFrom, moveTo);    
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo] = piece;
         if (piece == pawn) resetHMC();
-        else if (piece == king) setKingSquare(stm, to);
+        else if (piece == king) setKingSquare(stm, moveTo);
         break;
     case doublePush:
-        movePiece(stm, pawn, from, to);
-        setEpSquare(to);
+        movePiece(stm, pawn, moveFrom, moveTo);
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo] = pawn;
+        setEpSquare(moveTo);
         resetHMC();
         break;
     case kingCastle:
-        movePiece(stm, king, from, to);
+        movePiece(stm, king, moveFrom, moveTo);
         movePiece(stm, rook, h1 + KCoffset[stm], f1 + KCoffset[stm]); 
-        setKingSquare(stm, to);
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo] = king;
+        mPieceSquare[h1 + KCoffset[stm]] = 0;
+        mPieceSquare[f1 + KCoffset[stm]] = rook;
+        setKingSquare(stm, moveTo);
         break;
     case queenCastle:
-        movePiece(stm, king, from, to);
+        movePiece(stm, king, moveFrom, moveTo);
         movePiece(stm, rook, a1 + QCoffset[stm], d1 + QCoffset[stm]); 
-        setKingSquare(stm, to);
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo]   = king;
+        mPieceSquare[a1 + QCoffset[stm]] = 0;
+        mPieceSquare[d1 + QCoffset[stm]] = rook;
+        setKingSquare(stm, moveTo);
         break;
     case capture:
-        piece = searchPiece(from);
-        captured = searchPiece(to);
-        movePiece(stm, piece, from, to);
-        capturePiece(stm, captured, to);
-
+        piece = searchPiece(moveFrom);
+        captured = searchPiece(moveTo);
+        movePiece(stm, piece, moveFrom, moveTo);
+        capturePiece(stm, captured, moveTo);
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo] = piece;
         if (piece == king) setKingSquare(stm, tMove.to());
         setCaptured(captured);
         resetHMC();
         break;
     case enPassant:
-        movePiece(stm, pawn, from, to);
-        capturePiece(stm, pawn, to + EPoffset[stm]);
+        movePiece(stm, pawn, moveFrom, moveTo);
+        capturePiece(stm, pawn, moveTo + EPoffset[stm]);
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo] = pawn;
+        mPieceSquare[moveTo + EPoffset[stm]] = 0;
         setCaptured(pawn);
         resetHMC();
         break;
@@ -259,17 +279,21 @@ void Board::makeMove(const Move &tMove)
     case bishopPromo:
     case rookPromo:
     case queenPromo:
-        promotePiece(stm, tMove.promoPiece(), from, to);
+        promotePiece(stm, tMove.promoPiece(), moveFrom, moveTo);
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo] = tMove.promoPiece();
         resetHMC();
         break;
     case knightPromoCapture:
     case bishopPromoCapture:
     case rookPromoCapture:
     case queenPromoCapture:
-        captured = searchPiece(to);
-        capturePiece(stm, captured, to);
+        captured = searchPiece(moveTo);
+        capturePiece(stm, captured, moveTo);
+        promotePiece(stm, tMove.promoPiece(), moveFrom, moveTo);
+        mPieceSquare[moveFrom] = 0;
+        mPieceSquare[moveTo] = tMove.promoPiece();
         setCaptured(captured);
-        promotePiece(stm, tMove.promoPiece(), from, to);
         resetHMC();
         break;
     }
@@ -286,9 +310,10 @@ void Board::undoMove(const Move &tMove)
     if (getEpState()) mKey ^= mZobrist.getEPKey(getEpSquare()%8);
 
     toggleSideToMove();
-    int move_from = tMove.from();
-    int move_to = tMove.to();
-    int stm = getSideToMove();
+    const int moveFrom = tMove.from();
+    const int moveTo = tMove.to();
+    const int stm = getSideToMove();
+    int piece, captured;
     static constexpr std::array<int, 2> KCoffset = {a1, a8}; //adds eight rank values only if stm is black
     static constexpr std::array<int, 2> QCoffset = {a1, a8}; //adds eight rank values only if stm is black
     static constexpr std::array<int, 2> EPoffset = {-8, 8};
@@ -296,39 +321,64 @@ void Board::undoMove(const Move &tMove)
     
     switch (tMove.flag()){
     case quiet:
-        movePiece(stm, searchPiece(move_to), move_from, move_to);
+        piece = searchPiece(moveTo);
+        movePiece(stm, piece, moveFrom, moveTo);
+        mPieceSquare[moveFrom] = piece;
+        mPieceSquare[moveTo] = 0;
         break;
     case doublePush:
-        movePiece(stm, pawn, move_from, move_to);
+        movePiece(stm, pawn, moveFrom, moveTo);
+        mPieceSquare[moveFrom] = pawn;
+        mPieceSquare[moveTo] = 0;
         break;
     case kingCastle:
-        movePiece(stm, king, move_from, move_to);
+        movePiece(stm, king, moveFrom, moveTo);
         movePiece(stm, rook, h1 + KCoffset[stm], f1 + KCoffset[stm]); 
+        mPieceSquare[moveFrom] = king;
+        mPieceSquare[moveTo] = 0;
+        mPieceSquare[h1 + KCoffset[stm]] = rook;
+        mPieceSquare[f1 + KCoffset[stm]] = 0;
         break;
     case queenCastle:
-        movePiece(stm, king, move_from, move_to);
+        movePiece(stm, king, moveFrom, moveTo);
         movePiece(stm, rook, a1 + QCoffset[stm], d1 + QCoffset[stm]); 
+        mPieceSquare[moveFrom]   = king;
+        mPieceSquare[moveTo] = 0;
+        mPieceSquare[a1 + QCoffset[stm]] = rook;
+        mPieceSquare[d1 + QCoffset[stm]] = 0;
         break;
     case capture:
-        movePiece(stm, searchPiece(move_to), move_from, move_to);
-        capturePiece(stm, getCaptured(), move_to);
+        piece = searchPiece(moveTo);
+        captured = getCaptured();
+        movePiece(stm, piece, moveFrom, moveTo);
+        capturePiece(stm, getCaptured(), moveTo);
+        mPieceSquare[moveFrom] = piece;
+        mPieceSquare[moveTo] = captured;
         break;
     case enPassant:
-        movePiece(stm, pawn, move_from, move_to);
-        capturePiece(stm, pawn, move_to + EPoffset[stm]);
+        movePiece(stm, pawn, moveFrom, moveTo);
+        capturePiece(stm, pawn, moveTo + EPoffset[stm]);
+        mPieceSquare[moveFrom] = pawn;
+        mPieceSquare[moveTo]   = 0;
+        mPieceSquare[moveTo + EPoffset[stm]] = pawn;
         break;
     case knightPromo:
     case bishopPromo:
     case rookPromo:
     case queenPromo:
-        promotePiece(stm, tMove.promoPiece(), move_from, move_to);
+        promotePiece(stm, tMove.promoPiece(), moveFrom, moveTo);
+        mPieceSquare[moveFrom] = pawn;
+        mPieceSquare[moveTo]   = 0;
         break;
     case knightPromoCapture:
     case bishopPromoCapture:
     case rookPromoCapture:
     case queenPromoCapture:
-        capturePiece(stm, getCaptured(), move_to);
-        promotePiece(stm, tMove.promoPiece(), move_from, move_to);
+        captured = getCaptured();
+        capturePiece(stm, getCaptured(), moveTo);
+        promotePiece(stm, tMove.promoPiece(), moveFrom, moveTo);
+        mPieceSquare[moveFrom] = pawn;
+        mPieceSquare[moveTo]   = captured;
         break;
     }
 
@@ -336,38 +386,4 @@ void Board::undoMove(const Move &tMove)
 
     mKey ^= mZobrist.getCastleKey(getCastles());
     if (getEpState()) mKey ^= mZobrist.getEPKey(getEpSquare()%8);
-}
-
-int Board::searchPiece(int tSquare) const{
-    uint64_t mask = 1ULL << tSquare;
-    for (int piece = pawn; piece <= king; piece ++) 
-        if (mBitboards[piece] & mask) return piece;
-    return 0;
-}
-
-void Board::movePiece(int tSTM, int tPiece, int tFrom, int tTo) {
-    uint64_t mask = 1ULL << tFrom | 1ULL << tTo;
-    mBitboards[tPiece] ^= mask;
-    mBitboards[tSTM]   ^= mask;
-    mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tFrom);
-    mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tTo);
-}
-
-void Board::capturePiece(int tSTM, int tPiece, int tSquare)
-{
-    uint64_t mask = 1ULL << tSquare;
-    mBitboards[tPiece] ^= mask;
-    mBitboards[1-tSTM] ^= mask;
-    mKey ^= mZobrist.getPieceKey(1-tSTM, tPiece, tSquare);
-}
-
-void Board::promotePiece(int tSTM, int tPiece, int tFrom, int tTo)
-{
-    uint64_t maskTo = 1ULL << tTo;
-    uint64_t maskFrom = 1ULL << tFrom;
-    mBitboards[pawn]  ^= maskFrom;
-    mBitboards[tPiece] ^= maskTo;
-    mBitboards[tSTM]   ^= maskFrom | maskTo;
-    mKey ^= mZobrist.getPieceKey(tSTM, pawn, tFrom);
-    mKey ^= mZobrist.getPieceKey(tSTM, tPiece, tTo);
 }
